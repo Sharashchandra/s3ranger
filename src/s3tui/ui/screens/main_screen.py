@@ -6,6 +6,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Static
 
+from s3tui.ui.modals.download_modal import DownloadModal
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
 from s3tui.ui.widgets.path_bar import PathBar
@@ -15,6 +16,7 @@ class MainScreen(Screen):
     """Main screen displaying S3 buckets and contents."""
 
     BINDINGS = [
+        Binding("d", "download", "Download"),
         Binding("r", "refresh", "Refresh"),
         Binding("q", "quit", "Quit"),
     ]
@@ -22,6 +24,7 @@ class MainScreen(Screen):
     def __init__(self):
         super().__init__()
         self.selected_bucket = None
+        self.selected_object = None
 
     def compose(self) -> ComposeResult:
         """Create the layout for the main screen."""
@@ -39,6 +42,13 @@ class MainScreen(Screen):
                 with Vertical(id="content-panel"):
                     yield Static("Contents", id="content-header")
                     yield ObjectList(id="object-list")
+
+    def action_download(self) -> None:
+        """Download the currently selected S3 object."""
+        if self.selected_object:
+            # Push the download modal
+            modal = DownloadModal(self.selected_object)
+            self.app.push_screen(modal)
 
     def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
         """Handle bucket selection from the bucket list widget."""
@@ -60,6 +70,9 @@ class MainScreen(Screen):
         """Handle object selection from the object list widget."""
         object_key = message.object_key
         bucket_name = message.bucket_name
+
+        # Store selected object for download functionality
+        self.selected_object = f"s3://{bucket_name}/{object_key}"
 
         # Update path to show the selected object
         path_bar = self.query_one("#path-bar", PathBar)
