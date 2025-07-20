@@ -41,7 +41,7 @@ class S3:
             if not s3_uri and not bucket_name:
                 raise ValueError("Either s3_uri or bucket and key must be provided")
             if s3_uri:
-                bucket_name, key = S3.resolve_s3_location(s3_uri)
+                bucket_name, prefix = S3.resolve_s3_location(s3_uri)
             return func(*args, bucket_name=bucket_name, prefix=prefix or "", **kwargs)
 
         return wrapper
@@ -131,16 +131,16 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        file_key: str,
+        prefix: str,
         local_dir_path: str,
     ) -> None:
         """Download a file from S3."""
-        local_file_path = os.path.join(local_dir_path, os.path.basename(file_key))
+        local_file_path = os.path.join(local_dir_path, os.path.basename(prefix))
         if not os.path.exists(local_dir_path):
             os.makedirs(local_dir_path)
 
-        logger.info(f"Downloading file from s3://{bucket_name}/{file_key} to {local_file_path}")
-        client.download_file(bucket_name, file_key, local_file_path)
+        logger.info(f"Downloading file from s3://{bucket_name}/{prefix} to {local_file_path}")
+        client.download_file(bucket_name, prefix, local_file_path)
 
     @resolve_s3_uri
     @staticmethod
