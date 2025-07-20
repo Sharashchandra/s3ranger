@@ -120,3 +120,23 @@ DownloadModal {
 DownloadModal > * {
     background: rgba(0, 0, 0, 0.5);
 }
+
+/* Delete Modal Styles */
+DeleteModal {
+    align: center middle;
+}
+
+#delete-modal {
+    background: $surface;
+    border: thick $primary;
+    width: 60;
+    height: auto;
+    min-height: 15;
+    padding: 1;
+}
+
+/* Footer styling */
+Footer {
+    background: $primary;
+    color: $text;
+}
