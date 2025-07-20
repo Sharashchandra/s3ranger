@@ -3,7 +3,7 @@
 from textual.message import Message
 from textual.widgets import Tree
 
-from s3tui.services.s3_list import S3ListService
+from s3tui.gateways.s3 import S3
 
 
 class ObjectList(Tree):
@@ -128,7 +128,7 @@ class ObjectList(Tree):
 
         try:
             # Fetch objects in background thread
-            objects = S3ListService.list_s3_objects(bucket_name=bucket_name, prefix=prefix)
+            objects = S3.list_objects(bucket_name=bucket_name, prefix=prefix)
 
             # Update UI on main thread
             self.objects = objects
