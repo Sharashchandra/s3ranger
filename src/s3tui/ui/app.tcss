@@ -1,0 +1,56 @@
+#main-container {
+    layout: vertical;
+    height: 100%;
+}
+
+#path-bar {
+    dock: top;
+    height: 1;
+    background: $primary;
+    color: $text;
+    content-align: left middle;
+    padding: 0 1;
+}
+
+#content-area {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#bucket-panel {
+    width: 30%;
+    border: solid $primary;
+    margin: 1;
+}
+
+#content-panel {
+    width: 70%;
+    border: solid $primary;
+    margin: 1;
+}
+
+#bucket-header, #content-header {
+    dock: top;
+    height: 1;
+    background: $secondary;
+    color: $text;
+    content-align: center middle;
+    text-style: bold;
+}
+
+#bucket-list, #content-list, #object-list {
+    height: 1fr;
+    border: none;
+}
+
+ListView:focus {
+    border: solid $accent;
+}
+
+ListItem {
+    padding: 0 1;
+}
+
+ListItem > Static {
+    width: 100%;
+}
