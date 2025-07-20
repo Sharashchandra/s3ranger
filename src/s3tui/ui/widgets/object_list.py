@@ -1,13 +1,13 @@
 """Object list widget for displaying S3 bucket objects."""
 
 from textual.message import Message
-from textual.widgets import ListItem, ListView, Static
+from textual.widgets import Tree
 
 from s3tui.services.s3_list import S3ListService
 
 
-class ObjectList(ListView):
-    """Widget for displaying and selecting S3 bucket objects."""
+class ObjectList(Tree):
+    """Widget for displaying and selecting S3 bucket objects in a tree structure."""
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -17,36 +17,110 @@ class ObjectList(ListView):
             self.bucket_name = bucket_name
             super().__init__()
 
+    class FolderNavigated(Message):
+        """Message sent when navigating to a folder."""
+
+        def __init__(self, folder_path: str, bucket_name: str) -> None:
+            self.folder_path = folder_path
+            self.bucket_name = bucket_name
+            super().__init__()
+
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__("Root", **kwargs)
         self.objects = []
         self.current_bucket = None
         self._loading = False
-        self._id_to_key_map = {}  # Maps safe IDs to actual object keys
+        self._object_nodes = {}  # Maps object keys to tree nodes
+        self._folder_paths = {}  # Maps nodes to their folder paths
 
     def show_loading(self, bucket_name: str) -> None:
         """Show loading state for the object list."""
         self.clear()
         self._loading = True
         self.current_bucket = bucket_name
-        self._id_to_key_map.clear()  # Clear the mapping when loading
-        self.append(ListItem(Static(f"Loading objects from {bucket_name}..."), id="loading"))
+        self._object_nodes.clear()
+        self._folder_paths.clear()
+        self.root.add_leaf(f"Loading objects from {bucket_name}...")
 
     def show_empty_bucket(self, bucket_name: str) -> None:
         """Show empty bucket state."""
         self.clear()
         self._loading = False
         self.current_bucket = bucket_name
-        self._id_to_key_map.clear()  # Clear the mapping
-        self.append(ListItem(Static(f"Bucket '{bucket_name}' is empty"), id="empty"))
+        self._object_nodes.clear()
+        self._folder_paths.clear()
+        self.root.add_leaf(f"Bucket '{bucket_name}' is empty")
 
     def show_placeholder(self) -> None:
         """Show placeholder when no bucket is selected."""
         self.clear()
         self._loading = False
         self.current_bucket = None
-        self._id_to_key_map.clear()  # Clear the mapping
-        self.append(ListItem(Static("Select a bucket to view its contents"), id="placeholder"))
+        self._object_nodes.clear()
+        self._folder_paths.clear()
+        self.root.add_leaf("Select a bucket to view its contents")
+
+    def _build_tree_structure(self, objects):
+        """Build a hierarchical tree structure from flat object list."""
+        # Clear existing tree
+        self.clear()
+        self._object_nodes.clear()
+        self._folder_paths.clear()
+
+        # Dictionary to track folder nodes
+        folder_nodes = {}
+
+        # Sort objects to ensure consistent display order
+        sorted_objects = sorted(objects, key=lambda x: x["Key"])
+
+        for obj in sorted_objects:
+            object_key = obj["Key"]
+            size = obj.get("Size", 0)
+            parts = object_key.split("/")
+
+            # Track current node position in tree
+            current_node = self.root
+            current_path = ""
+
+            # Process each part of the path
+            for i, part in enumerate(parts):
+                if i == len(parts) - 1:
+                    # This is the final file
+                    if size > 0:
+                        # Format size in human-readable format
+                        if size < 1024:
+                            size_str = f"{size} B"
+                        elif size < 1024 * 1024:
+                            size_str = f"{size / 1024:.1f} KB"
+                        elif size < 1024 * 1024 * 1024:
+                            size_str = f"{size / (1024 * 1024):.1f} MB"
+                        else:
+                            size_str = f"{size / (1024 * 1024 * 1024):.1f} GB"
+                    else:
+                        size_str = "0 B"
+
+                    # Add file node with size
+                    display_text = f"{part} ({size_str})"
+                    file_node = current_node.add_leaf(display_text)
+                    # Store the full object key for this node
+                    file_node.data = object_key
+                    self._object_nodes[object_key] = file_node
+                else:
+                    # This is a folder
+                    if current_path:
+                        current_path += f"/{part}"
+                    else:
+                        current_path = part
+
+                    # Check if we already have this folder node
+                    if current_path not in folder_nodes:
+                        folder_node = current_node.add(f"📁 {part}")
+                        folder_node.data = None  # Folders don't have object data
+                        folder_nodes[current_path] = folder_node
+                        # Track the folder path for this node
+                        self._folder_paths[folder_node] = current_path
+
+                    current_node = folder_nodes[current_path]
 
     async def load_objects_for_bucket(self, bucket_name: str, prefix: str = None) -> None:
         """Load objects for the specified bucket."""
@@ -59,62 +133,62 @@ class ObjectList(ListView):
             # Update UI on main thread
             self.objects = objects
             self.current_bucket = bucket_name
-            self.clear()
             self._loading = False
-            self._id_to_key_map.clear()  # Clear previous mapping
 
             if not objects:
                 self.show_empty_bucket(bucket_name)
                 return
 
-            for index, obj in enumerate(self.objects):
-                object_key = obj["Key"]
-                size = obj.get("Size", 0)
-
-                # Create a safe ID for Textual (using index to ensure uniqueness)
-                safe_id = f"object_{index}"
-                # Map the safe ID to the actual object key
-                self._id_to_key_map[safe_id] = object_key
-
-                # Format the display text
-                if size > 0:
-                    # Format size in human-readable format
-                    if size < 1024:
-                        size_str = f"{size} B"
-                    elif size < 1024 * 1024:
-                        size_str = f"{size / 1024:.1f} KB"
-                    elif size < 1024 * 1024 * 1024:
-                        size_str = f"{size / (1024 * 1024):.1f} MB"
-                    else:
-                        size_str = f"{size / (1024 * 1024 * 1024):.1f} GB"
-                else:
-                    size_str = "0 B"
-
-                # Format the display text with object name and size
-                display_text = f"{object_key} ({size_str})"
-                self.append(ListItem(Static(display_text), id=safe_id))
+            # Build the tree structure
+            self._build_tree_structure(objects)
 
         except Exception as e:
             # Show error and keep focusable
             self.clear()
             self._loading = False
             self.current_bucket = bucket_name
-            self.append(ListItem(Static(f"Error loading objects: {str(e)}"), id="error"))
+            self.root.add_leaf(f"Error loading objects: {str(e)}")
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Handle object selection."""
-        if event.list_view == self:
-            # Don't allow selection while loading
-            if self._loading:
-                return
+    def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
+        """Handle tree node selection."""
+        if self._loading:
+            return
 
-            # Extract the safe ID and map it to the actual object key
-            item_id = event.item.id
-            if item_id and item_id in self._id_to_key_map:
-                object_key = self._id_to_key_map[item_id]
-                if self.current_bucket:
-                    # Post a message to the parent screen with the actual object key
-                    self.post_message(self.ObjectSelected(object_key, self.current_bucket))
+        node = event.node
+        # Check if this node represents a file (has object data)
+        if hasattr(node, "data") and node.data is not None:
+            object_key = node.data
+            if self.current_bucket:
+                # Post a message to the parent screen with the actual object key
+                self.post_message(self.ObjectSelected(object_key, self.current_bucket))
+
+    def on_tree_node_expanded(self, event: Tree.NodeExpanded) -> None:
+        """Handle tree node expansion - update path bar when folder is opened."""
+        if self._loading or not self.current_bucket:
+            return
+
+        node = event.node
+        # Check if this is a folder node (has folder path but no object data)
+        if node in self._folder_paths:
+            folder_path = self._folder_paths[node]
+            self.post_message(self.FolderNavigated(folder_path, self.current_bucket))
+
+    def on_tree_node_collapsed(self, event: Tree.NodeCollapsed) -> None:
+        """Handle tree node collapse - update path bar when folder is closed."""
+        if self._loading or not self.current_bucket:
+            return
+
+        node = event.node
+        # When a folder is collapsed, navigate to its parent folder
+        if node in self._folder_paths:
+            folder_path = self._folder_paths[node]
+            # Get parent folder path
+            if "/" in folder_path:
+                parent_path = "/".join(folder_path.split("/")[:-1])
+            else:
+                # If no parent, navigate back to bucket root
+                parent_path = ""
+            self.post_message(self.FolderNavigated(parent_path, self.current_bucket))
 
     def refresh_objects(self) -> None:
         """Refresh the object list for the current bucket."""

@@ -65,6 +65,15 @@ class MainScreen(Screen):
         path_bar = self.query_one("#path-bar", PathBar)
         path_bar.update_path(f"s3://{bucket_name}/{object_key}")
 
+    def on_object_list_folder_navigated(self, message: ObjectList.FolderNavigated) -> None:
+        """Handle folder navigation from the object list widget."""
+        folder_path = message.folder_path
+        bucket_name = message.bucket_name
+
+        # Update path bar to show the current folder
+        path_bar = self.query_one("#path-bar", PathBar)
+        path_bar.navigate_to_folder(bucket_name, folder_path)
+
     def get_current_path(self) -> str:
         """Get the current path from the PathBar."""
         path_bar = self.query_one("#path-bar", PathBar)
