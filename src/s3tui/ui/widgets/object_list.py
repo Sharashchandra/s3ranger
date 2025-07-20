@@ -3,7 +3,7 @@
 from textual.message import Message
 from textual.widgets import Tree
 
-from s3tui.services.s3_list import S3ListService
+from s3tui.gateways.s3 import S3
 
 
 class ObjectList(Tree):
@@ -128,7 +128,7 @@ class ObjectList(Tree):
 
         try:
             # Fetch objects in background thread
-            objects = S3ListService.list_s3_objects(bucket_name=bucket_name, prefix=prefix)
+            objects = S3.list_objects(bucket_name=bucket_name, prefix=prefix)
 
             # Update UI on main thread
             self.objects = objects
@@ -161,6 +161,13 @@ class ObjectList(Tree):
             if self.current_bucket:
                 # Post a message to the parent screen with the actual object key
                 self.post_message(self.ObjectSelected(object_key, self.current_bucket))
+        # Check if this node represents a folder
+        elif node in self._folder_paths:
+            folder_path = self._folder_paths[node]
+            if self.current_bucket:
+                # Post a message with folder path (add trailing slash to indicate it's a folder)
+                folder_key = f"{folder_path}/"
+                self.post_message(self.ObjectSelected(folder_key, self.current_bucket))
 
     def on_tree_node_expanded(self, event: Tree.NodeExpanded) -> None:
         """Handle tree node expansion - update path bar when folder is opened."""

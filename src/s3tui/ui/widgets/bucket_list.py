@@ -3,7 +3,7 @@
 from textual.message import Message
 from textual.widgets import ListItem, ListView, Static
 
-from s3tui.services.s3_list import S3ListService
+from s3tui.gateways.s3 import S3
 
 
 class BucketList(ListView):
@@ -27,7 +27,7 @@ class BucketList(ListView):
     def load_buckets(self) -> None:
         """Load S3 buckets and populate the list."""
         try:
-            self.buckets = S3ListService.list_s3_buckets()
+            self.buckets = S3.list_buckets()
             self.clear()
 
             for bucket in self.buckets:
