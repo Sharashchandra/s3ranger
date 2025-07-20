@@ -187,11 +187,11 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        file_key: str,
+        prefix: str,
     ) -> None:
         """Delete a file from S3."""
-        logger.info(f"Deleting file s3://{bucket_name}/{file_key}")
-        client.delete_object(Bucket=bucket_name, Key=file_key)
+        logger.info(f"Deleting file s3://{bucket_name}/{prefix}")
+        client.delete_object(Bucket=bucket_name, Key=prefix)
 
     @resolve_s3_uri
     @staticmethod

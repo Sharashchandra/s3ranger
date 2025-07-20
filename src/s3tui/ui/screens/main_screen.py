@@ -4,8 +4,9 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Static
+from textual.widgets import Footer, Static
 
+from s3tui.ui.modals.delete_modal import DeleteModal
 from s3tui.ui.modals.download_modal import DownloadModal
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
@@ -17,6 +18,7 @@ class MainScreen(Screen):
 
     BINDINGS = [
         Binding("d", "download", "Download"),
+        Binding("y", "delete", "Delete"),
         Binding("r", "refresh", "Refresh"),
         Binding("q", "quit", "Quit"),
     ]
@@ -43,12 +45,29 @@ class MainScreen(Screen):
                     yield Static("Contents", id="content-header")
                     yield ObjectList(id="object-list")
 
+            # Footer with key bindings
+            yield Footer()
+
     def action_download(self) -> None:
         """Download the currently selected S3 object."""
         if self.selected_object:
             # Push the download modal
             modal = DownloadModal(self.selected_object)
             self.app.push_screen(modal)
+
+    def action_delete(self) -> None:
+        """Delete the currently selected S3 object."""
+        if self.selected_object:
+            # Push the delete modal and handle the result
+            modal = DeleteModal(self.selected_object)
+            self.app.push_screen(modal, self._on_delete_complete)
+
+    def _on_delete_complete(self, deleted: bool) -> None:
+        """Handle the result of the delete operation."""
+        if deleted:
+            # Refresh the object list to show the updated state
+            object_list = self.query_one("#object-list", ObjectList)
+            object_list.refresh_objects()
 
     def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
         """Handle bucket selection from the bucket list widget."""
