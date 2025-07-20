@@ -54,3 +54,69 @@ ListItem {
 ListItem > Static {
     width: 100%;
 }
+
+/* Download Modal Styles */
+DownloadModal {
+    align: center middle;
+}
+
+#download-modal {
+    background: $surface;
+    border: thick $primary;
+    width: 60;
+    height: auto;
+    min-height: 15;
+    padding: 1;
+}
+
+#modal-title {
+    dock: top;
+    height: 1;
+    background: $primary;
+    color: $text;
+    content-align: center middle;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#form-container {
+    height: auto;
+    margin-bottom: 1;
+}
+
+#form-container Label {
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+#source-path {
+    background: $surface-lighten-1;
+    color: $text;
+    border: solid $secondary;
+    padding: 0 1;
+    margin-bottom: 1;
+    height: 3;
+    text-align: left;
+    content-align: left middle;
+}
+
+#destination-input {
+    margin-bottom: 1;
+}
+
+#button-container {
+    layout: horizontal;
+    height: 3;
+    align: center bottom;
+    margin-top: 1;
+}
+
+#button-container Button {
+    margin: 0 1;
+    min-width: 12;
+}
+
+/* Modal screen background */
+DownloadModal > * {
+    background: rgba(0, 0, 0, 0.5);
+}
