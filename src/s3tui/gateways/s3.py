@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 
 import boto3
 from awscli.clidriver import create_clidriver
-from loguru import logger
 
 
 class S3:
@@ -52,7 +51,7 @@ class S3:
     @staticmethod
     def list_buckets(client: boto3.client, *, prefix: str = None, limit: int = 100) -> list[dict]:
         """List all S3 buckets."""
-        logger.info(f"Listing S3 buckets with prefix '{prefix or ''}'")
+        print(f"Listing S3 buckets with prefix '{prefix or ''}'")
         response = client.list_buckets(MaxBuckets=limit, Prefix=prefix or "")
 
         return response.get("Buckets", [])
@@ -70,7 +69,7 @@ class S3:
         paginator = client.get_paginator("list_objects_v2")
         response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
 
-        logger.info(f"Listing objects in bucket '{bucket_name}' with prefix '{prefix}'")
+        print(f"Listing objects in bucket '{bucket_name}' with prefix '{prefix}'")
         objects = []
         for response in response_iterator:
             if "Contents" in response:
@@ -82,23 +81,29 @@ class S3:
 
     @get_client
     @resolve_s3_uri
-    def upload_file(self, client: boto3.client, *, local_file_path: str, bucket_name: str, prefix: str = None) -> None:
+    @staticmethod
+    def upload_file(client: boto3.client, *, local_file_path: str, bucket_name: str, prefix: str = None) -> None:
+        """Upload a file to S3."""
         if not prefix or prefix.endswith("/"):
-            key = f"{prefix}{os.path.basename(local_file_path)}"
+            key = f"{prefix or ''}{os.path.basename(local_file_path)}"
+        else:
+            key = prefix
 
-        logger.info(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
+        print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
         client.upload_file(local_file_path, bucket_name, key)
 
     @resolve_s3_uri
     @staticmethod
     def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str = None) -> None:
         """Upload a directory to S3."""
+        local_dir_path = local_dir_path.rstrip("/")
         if not os.path.isdir(local_dir_path):
             raise ValueError(f"Local path '{local_dir_path}' is not a directory")
-        logger.info(f"Uploading folder: {local_dir_path} to s3://{bucket_name}/{prefix}")
+        print(f"Uploading folder: {local_dir_path} to s3://{bucket_name}/{prefix}")
+        folder_name = os.path.basename(local_dir_path)
 
         cli_driver = create_clidriver()
-        cli_driver.main(["s3", "cp", local_dir_path, f"s3://{bucket_name}/{prefix or ''}", "--recursive"])
+        cli_driver.main(["s3", "cp", local_dir_path, f"s3://{bucket_name}/{prefix or ''}{folder_name}", "--recursive"])
 
     @get_client
     @resolve_s3_uri
@@ -120,7 +125,7 @@ class S3:
                 relative_path = os.path.relpath(local_file_path, local_dir_path)
                 key = f"{prefix}{relative_path.replace(os.sep, '/')}"
 
-                logger.info(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
+                print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
                 client.upload_file(local_file_path, bucket_name, key)
 
     # -------------------------Download------------------------- #
@@ -139,14 +144,14 @@ class S3:
         if not os.path.exists(local_dir_path):
             os.makedirs(local_dir_path)
 
-        logger.info(f"Downloading file from s3://{bucket_name}/{prefix} to {local_file_path}")
+        print(f"Downloading file from s3://{bucket_name}/{prefix} to {local_file_path}")
         client.download_file(bucket_name, prefix, local_file_path)
 
     @resolve_s3_uri
     @staticmethod
     def download_directory(*, bucket_name: str, prefix: str = None, local_dir_path: str = None) -> None:
         """Download a directory from S3."""
-        logger.info(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
+        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
         if not local_dir_path:
             local_dir_path = os.path.join(os.getcwd(), prefix or "")
 
@@ -170,7 +175,7 @@ class S3:
         if not os.path.exists(local_dir_path):
             os.makedirs(local_dir_path)
 
-        logger.info(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
+        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
         for response in response_iterator:
             if "Contents" in response:
                 for obj in response["Contents"]:
@@ -190,14 +195,14 @@ class S3:
         prefix: str,
     ) -> None:
         """Delete a file from S3."""
-        logger.info(f"Deleting file s3://{bucket_name}/{prefix}")
+        print(f"Deleting file s3://{bucket_name}/{prefix}")
         client.delete_object(Bucket=bucket_name, Key=prefix)
 
     @resolve_s3_uri
     @staticmethod
     def delete_directory(*, bucket_name: str, prefix: str = None) -> None:
         """Delete a directory from S3."""
-        logger.info(f"Deleting directory s3://{bucket_name}/{prefix}")
+        print(f"Deleting directory s3://{bucket_name}/{prefix}")
         cli_driver = create_clidriver()
         cli_driver.main(["s3", "rm", f"s3://{bucket_name}/{prefix or ''}", "--recursive"])
 
@@ -214,7 +219,7 @@ class S3:
         paginator = client.get_paginator("list_objects_v2")
         response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
 
-        logger.info(f"Deleting directory s3://{bucket_name}/{prefix}")
+        print(f"Deleting directory s3://{bucket_name}/{prefix}")
         for response in response_iterator:
             if "Contents" in response:
                 objects_to_delete = [{"Key": obj["Key"]} for obj in response["Contents"]]

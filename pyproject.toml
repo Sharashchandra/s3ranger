@@ -7,7 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "awscli>=1.41.9",
     "boto3>=1.39.9",
-    "loguru>=0.7.3",
     "textual>=4.0.0",
 ]
 
