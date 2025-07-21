@@ -135,6 +135,35 @@ DeleteModal {
     padding: 1;
 }
 
+/* Upload Modal Styles */
+UploadModal {
+    align: center middle;
+}
+
+#upload-modal {
+    background: $surface;
+    border: thick $primary;
+    width: 60;
+    height: auto;
+    min-height: 15;
+    padding: 1;
+}
+
+#source-input {
+    margin-bottom: 1;
+}
+
+#destination-path {
+    background: $surface;
+    color: $text;
+    border: solid $secondary;
+    padding: 0 1;
+    margin-bottom: 1;
+    height: 3;
+    text-align: left;
+    content-align: left middle;
+}
+
 /* Footer styling */
 Footer {
     background: $primary;
