@@ -109,6 +109,16 @@ BucketList {
     height: 1fr;
 }
 
+#bucket-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #0d1117;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
 /* ====================================
  * BUCKET ITEM COMPONENT
  * ==================================== */
