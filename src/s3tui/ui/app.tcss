@@ -240,6 +240,19 @@ Breadcrumb:hover {
     visibility: visible;
 }
 
+/* ====================================
+ * LOADING INDICATOR
+ * ==================================== */
+#object-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #0d1117;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
 #object-table {
     background: #0d1117;
     height: 1fr;
