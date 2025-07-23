@@ -4,6 +4,8 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, Static
 
+from s3tui.gateways.s3 import S3
+
 
 class BucketItem(ListItem):
     """Individual bucket item widget"""
@@ -41,23 +43,31 @@ class BucketList(Static):
             yield ListView(id="bucket-list-view")
 
     def on_mount(self) -> None:
-        """Called when the widget is mounted - load dummy buckets"""
-        self._load_dummy_buckets()
+        """Called when the widget is mounted"""
+        self.load_buckets()
 
     def watch_buckets(self, buckets: list[dict]) -> None:
         """Called when buckets reactive property changes"""
         self._update_bucket_list()
 
-    def _load_dummy_buckets(self) -> None:
-        """Load dummy bucket data for testing"""
-        dummy_buckets = [
-            {"name": "d-galesandbox-prod", "creation_date": "2024-01-15", "region": "us-east-1"},
-            {"name": "d-galesandbox-staging", "creation_date": "2024-01-10", "region": "us-west-2"},
-            {"name": "d-galesandbox-dev", "creation_date": "2024-01-05", "region": "eu-west-1"},
-            {"name": "d-galesandbox-backup", "creation_date": "2024-01-01", "region": "us-east-1"},
-            {"name": "d-galesandbox-logs", "creation_date": "2023-12-20", "region": "us-west-1"},
+    def load_buckets(self) -> None:
+        try:
+            raw_buckets = S3.list_buckets(prefix="d-galesandbox-")  # Hardcoded prefix
+            self.buckets = self._transform_buckets_data(raw_buckets)
+        except Exception as e:
+            self.notify(f"Error loading buckets: {e}", severity="error")
+            self.buckets = []
+
+    def _transform_buckets_data(self, buckets: list[dict]) -> list[dict]:
+        """Transform raw bucket data into a more usable format"""
+        return [
+            {
+                "name": bucket["Name"],
+                "creation_date": bucket["CreationDate"].strftime("%Y-%m-%d"),
+                "region": bucket.get("BucketRegion", "Unknown"),  # Default to us-east-1 if not specified
+            }
+            for bucket in buckets
         ]
-        self.buckets = dummy_buckets
 
     def _update_bucket_list(self) -> None:
         """Update the bucket list UI (called from main thread)"""
@@ -94,7 +104,6 @@ class BucketList(Static):
             bucket_items = list(self.query(BucketItem))
             try:
                 self.selected_bucket = bucket_items.index(event.item)
-                self.notify(f"Selected bucket: {event.item.bucket_name}")
                 # Post message to parent screen
                 self.post_message(self.BucketSelected(event.item.bucket_name))
             except ValueError:
