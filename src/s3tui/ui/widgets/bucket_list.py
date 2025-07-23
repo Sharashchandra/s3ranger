@@ -1,8 +1,10 @@
+import threading
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import Label, ListItem, ListView, Static
+from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3tui.gateways.s3 import S3
 
@@ -29,6 +31,7 @@ class BucketList(Static):
 
     buckets: list[dict] = reactive([])
     selected_bucket = reactive(0)
+    is_loading: bool = reactive(False)
 
     class BucketSelected(Message):
         """Message sent when a bucket is selected"""
@@ -40,23 +43,65 @@ class BucketList(Static):
     def compose(self) -> ComposeResult:
         with Vertical(id="bucket-list-container"):
             yield Static("Buckets", id="bucket-panel-title")
+            yield LoadingIndicator(id="bucket-loading")
             yield ListView(id="bucket-list-view")
 
     def on_mount(self) -> None:
         """Called when the widget is mounted"""
-        self.load_buckets()
+        # Load buckets after UI is ready
+        self.call_later(self.load_buckets)
 
     def watch_buckets(self, buckets: list[dict]) -> None:
         """Called when buckets reactive property changes"""
         self._update_bucket_list()
 
+    def watch_is_loading(self, is_loading: bool) -> None:
+        """React to loading state changes."""
+        try:
+            loading_indicator = self.query_one("#bucket-loading", LoadingIndicator)
+            list_view = self.query_one("#bucket-list-view", ListView)
+
+            if is_loading:
+                loading_indicator.display = True
+                list_view.display = False
+            else:
+                loading_indicator.display = False
+                list_view.display = True
+        except Exception:
+            # Widgets not ready yet, silently ignore
+            pass
+
     def load_buckets(self) -> None:
+        """Load buckets from S3 with loading indicator."""
+        # Start loading
+        self.is_loading = True
+
+        # Use threading to load buckets asynchronously
+        thread = threading.Thread(target=self._load_buckets_async, daemon=True)
+        thread.start()
+
+    def _load_buckets_async(self) -> None:
+        """Asynchronously load buckets from S3."""
         try:
             raw_buckets = S3.list_buckets(prefix="d-galesandbox-")  # Hardcoded prefix
-            self.buckets = self._transform_buckets_data(raw_buckets)
+            buckets = self._transform_buckets_data(raw_buckets)
+            # Update state on the main thread using call_later
+            self.app.call_later(lambda: self._on_buckets_loaded(buckets))
         except Exception as e:
-            self.notify(f"Error loading buckets: {e}", severity="error")
-            self.buckets = []
+            # Handle S3 errors gracefully - capture exception in closure
+            error = e
+            self.app.call_later(lambda: self._on_buckets_error(error))
+
+    def _on_buckets_loaded(self, buckets: list[dict]) -> None:
+        """Handle successful buckets loading."""
+        self.buckets = buckets
+        self.is_loading = False
+
+    def _on_buckets_error(self, error: Exception) -> None:
+        """Handle buckets loading error."""
+        self.notify(f"Error loading buckets: {error}", severity="error")
+        self.buckets = []
+        self.is_loading = False
 
     def _transform_buckets_data(self, buckets: list[dict]) -> list[dict]:
         """Transform raw bucket data into a more usable format"""
