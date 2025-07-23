@@ -1,0 +1,104 @@
+Color Palette
+Background Colors:
+
+Primary background: #0d1117
+Secondary background (panels, header): #161b22
+Hover background: #161b22
+Focused background: #1f2937
+Selected background: #0969da (buckets), #0d419d (objects)
+
+Border Colors:
+
+Primary borders: #30363d
+Focus indicator: #58a6ff
+Selected item left border: #ffffff
+
+Text Colors:
+
+Primary text: #c9d1d9
+Secondary text: #f0f6fc
+Muted text: #7d8590
+Selected text: #ffffff
+Selected secondary text: #b6e3ff
+Accent/link color: #58a6ff
+Success/connected: #3fb950
+
+Special Colors:
+
+Folder icon: #f0883e
+File icon: #7d8590
+Key binding background: #21262d
+
+Scrollbar Colors:
+
+Track: #0d1117
+Thumb: #30363d
+Thumb hover: #484f58
+
+Typography
+Font Stack:
+cssfont-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+Font Sizes:
+
+Base font size: 13px
+Small text (metadata, status): 11px
+Tiny text (keybindings): 10px
+Header status: 12px
+Multi-select dots: 8px
+
+Font Properties:
+
+Line height: 1.4
+Font weight: normal (no bold used)
+Letter spacing for headers: 0.5px
+
+Spacing & Layout
+Padding Values:
+
+Header: 8px 12px
+Panel titles: 6px 12px
+List items: 6px 12px (buckets), 4px 12px (objects)
+Footer: 6px 12px
+Key badges: 2px 4px
+
+Margins:
+
+Bucket metadata top margin: 1px
+Icon gaps: 8px
+Status info gaps: 16px
+Keybinding gaps: 12px
+
+Border Widths:
+
+Standard borders: 1px
+Focus left borders: 2px
+
+Component Specifications
+Grid Layout (Object List):
+cssgrid-template-columns: 1fr 80px 120px 100px;
+gap: 16px;
+Scrollbar:
+
+Width: 6px
+Border radius: 3px
+
+Panel Widths:
+
+Left panel: 320px
+Right panel: flex: 1 (remaining space)
+
+Transitions:
+csstransition: all 0.1s ease;
+Icon Specifications
+Unicode Icons Used:
+
+Folder: 📁
+File: 📄
+Connected status: ●
+Multi-select indicator: ●
+
+Icon Sizes:
+
+Object icons: 12px font-size, 14px width
+Status indicator: inherited from parent
+Multi-select dots: 8px
