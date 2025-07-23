@@ -1,8 +1,10 @@
+import threading
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable, LoadingIndicator, Static
 
 from s3tui.gateways.s3 import S3
 
@@ -24,6 +26,7 @@ class ObjectList(Static):
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
     selected_objects: set[int] = reactive(set())
+    is_loading: bool = reactive(False)
 
     # Private cache for all bucket objects
     _all_objects: list[dict] = []
@@ -40,6 +43,7 @@ class ObjectList(Static):
         """Compose the widget layout."""
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
+            yield LoadingIndicator(id="object-loading")
             yield DataTable(id="object-table")
 
     def on_mount(self) -> None:
@@ -82,6 +86,22 @@ class ObjectList(Static):
         self._update_table_display()
         self._focus_first_row()
 
+    def watch_is_loading(self, is_loading: bool) -> None:
+        """React to loading state changes."""
+        try:
+            loading_indicator = self.query_one("#object-loading", LoadingIndicator)
+            table = self.query_one("#object-table", DataTable)
+
+            if is_loading:
+                loading_indicator.display = True
+                table.display = False
+            else:
+                loading_indicator.display = False
+                table.display = True
+        except Exception:
+            # Widgets not ready yet, silently ignore
+            pass
+
     def _update_breadcrumb(self) -> None:
         """Update the breadcrumb navigation display."""
         try:
@@ -97,18 +117,43 @@ class ObjectList(Static):
             self._clear_objects()
             return
 
+        # Start loading
+        self.is_loading = True
+
+        # Use threading to load objects asynchronously
+        thread = threading.Thread(target=self._load_objects_async, daemon=True)
+        thread.start()
+
+    def _load_objects_async(self) -> None:
+        """Asynchronously load objects from S3."""
         try:
             s3_uri = f"s3://{self.current_bucket}/"
-            self._all_objects = S3.list_objects(s3_uri=s3_uri)
-            self._filter_objects_by_prefix()
-        except Exception:
-            # Handle S3 errors gracefully
-            self._clear_objects()
+            objects = S3.list_objects(s3_uri=s3_uri)
+            # Update state on the main thread using call_later
+            self.app.call_later(lambda: self._on_objects_loaded(objects))
+        except Exception as e:
+            # Handle S3 errors gracefully - capture exception in closure
+            error = e
+            self.app.call_later(lambda: self._on_objects_error(error))
+
+    def _on_objects_loaded(self, objects: list[dict]) -> None:
+        """Handle successful objects loading."""
+        self._all_objects = objects
+        self._filter_objects_by_prefix()
+        self.is_loading = False
+
+    def _on_objects_error(self, error: Exception) -> None:
+        """Handle objects loading error."""
+        self._clear_objects()
+        self.is_loading = False
+        # Optionally show an error message
+        self.notify(f"Error loading bucket objects: {error}", severity="error")
 
     def _clear_objects(self) -> None:
         """Clear all object data."""
         self._all_objects = []
         self.objects = []
+        self.is_loading = False
 
     def _filter_objects_by_prefix(self) -> None:
         """Filter cached objects to show only those matching the current prefix."""
