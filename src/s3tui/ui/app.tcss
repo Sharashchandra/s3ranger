@@ -1,171 +1,58 @@
-#main-container {
-    layout: vertical;
-    height: 100%;
+/* S3TUI Color Palette and Typography */
+
+/* Global App Styling */
+App {
+    background: #0d1117;
+    color: #c9d1d9;
 }
 
-#path-bar {
+/* Title Bar Styling */
+TitleBar {
     dock: top;
-    height: 1;
-    background: $primary;
-    color: $text;
-    content-align: left middle;
+    height: auto;
+    border-bottom: solid #30363d;
     padding: 0 1;
 }
 
-#content-area {
-    layout: horizontal;
-    height: 1fr;
-}
-
-#bucket-panel {
-    width: 30%;
-    border: solid $primary;
-    margin: 1;
-}
-
-#content-panel {
-    width: 70%;
-    border: solid $primary;
-    margin: 1;
-}
-
-#bucket-header, #content-header {
-    dock: top;
-    height: 1;
-    background: $secondary;
-    color: $text;
-    content-align: center middle;
-    text-style: bold;
-}
-
-#bucket-list, #content-list, #object-list {
-    height: 1fr;
-    border: none;
-}
-
-ListView:focus {
-    border: solid $accent;
-}
-
-ListItem {
-    padding: 0 1;
-}
-
-ListItem > Static {
+#title-bar-container {
+    height: auto;
     width: 100%;
 }
 
-/* Download Modal Styles */
-DownloadModal {
-    align: center middle;
-}
-
-#download-modal {
-    background: $surface;
-    border: thick $primary;
-    width: 60;
-    height: auto;
-    min-height: 15;
-    padding: 1;
-}
-
-#modal-title {
-    dock: top;
-    height: 1;
-    background: $primary;
-    color: $text;
-    content-align: center middle;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-#form-container {
-    height: auto;
-    margin-bottom: 1;
-}
-
-#form-container Label {
-    margin-bottom: 1;
-    text-style: bold;
-}
-
-#source-path {
-    background: $surface-lighten-1;
-    color: $text;
-    border: solid $secondary;
-    padding: 0 1;
-    margin-bottom: 1;
-    height: 3;
-    text-align: left;
+#title {
+    color: #58a6ff;
     content-align: left middle;
+    text-style: none;
+    width: auto;
 }
 
-#destination-input {
-    margin-bottom: 1;
-}
-
-#button-container {
-    layout: horizontal;
-    height: 3;
-    align: center bottom;
-    margin-top: 1;
-}
-
-#button-container Button {
-    margin: 0 1;
-    min-width: 12;
-}
-
-/* Modal screen background */
-DownloadModal > * {
-    background: rgba(0, 0, 0, 0.5);
-}
-
-/* Delete Modal Styles */
-DeleteModal {
-    align: center middle;
-}
-
-#delete-modal {
-    background: $surface;
-    border: thick $primary;
-    width: 60;
+#status-container {
+    dock: right;
+    width: auto;
     height: auto;
-    min-height: 15;
-    padding: 1;
+    content-align: right middle;
 }
 
-/* Upload Modal Styles */
-UploadModal {
-    align: center middle;
+#connected-indicator {
+    color: #3fb950;
+    width: auto;
+    margin-right: 1;
 }
 
-#upload-modal {
-    background: $surface;
-    border: thick $primary;
-    width: 60;
-    height: auto;
-    min-height: 15;
-    padding: 1;
+#aws-info {
+    color: #7d8590;
+    width: auto;
+    text-style: none;
 }
 
-#source-input {
-    margin-bottom: 1;
+/* Main Container */
+#main-container {
+    background: #0d1117;
+    border: solid #30363d;
 }
 
-#destination-path {
-    background: $surface;
-    color: $text;
-    border: solid $secondary;
-    padding: 0 1;
-    margin-bottom: 1;
-    height: 3;
-    text-align: left;
-    content-align: left middle;
-}
-
-/* Footer styling */
-Footer {
-    background: $primary;
-    color: $text;
+/* Common text styling */
+Static {
+    text-style: none;
+    background: transparent;
 }

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS S3 TUI - Terminal Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border: 1px solid #30363d;
+        }
+
+        /* Header */
+        .header {
+            background: #161b22;
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            color: #58a6ff;
+            font-weight: normal;
+        }
+
+        .status {
+            color: #7d8590;
+            font-size: 12px;
+        }
+
+        .status .connected {
+            color: #3fb950;
+        }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Left panel - Buckets */
+        .left-panel {
+            width: 320px;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            background: #161b22;
+            padding: 6px 12px;
+            border-bottom: 1px solid #30363d;
+            color: #f0f6fc;
+            font-weight: normal;
+        }
+
+        .bucket-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .bucket-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            display: block;
+            border-left: 2px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bucket-item:hover {
+            background: #161b22;
+        }
+
+        .bucket-item.focused {
+            background: #1f2937;
+            border-left-color: #58a6ff;
+            color: #58a6ff;
+        }
+
+        .bucket-item.selected {
+            background: #0969da;
+            color: #ffffff;
+            border-left-color: #ffffff;
+        }
+
+        .bucket-name {
+            font-weight: normal;
+        }
+
+        .bucket-meta {
+            font-size: 11px;
+            color: #7d8590;
+            margin-top: 1px;
+        }
+
+        .bucket-item.selected .bucket-meta {
+            color: #b6e3ff;
+        }
+
+        /* Right panel - Objects */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0d1117;
+        }
+
+        .breadcrumb-bar {
+            background: #161b22;
+            padding: 6px 12px;
+            border-bottom: 1px solid #30363d;
+            font-size: 12px;
+        }
+
+        .breadcrumb {
+            color: #7d8590;
+        }
+
+        .breadcrumb-current {
+            color: #f0f6fc;
+        }
+
+        .breadcrumb-sep {
+            color: #30363d;
+            margin: 0 4px;
+        }
+
+        /* Object list header */
+        .list-header {
+            background: #161b22;
+            padding: 4px 12px;
+            border-bottom: 1px solid #30363d;
+            display: grid;
+            grid-template-columns: 1fr 80px 120px 100px;
+            gap: 16px;
+            font-size: 11px;
+            color: #7d8590;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Object list */
+        .object-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .object-item {
+            padding: 4px 12px;
+            display: grid;
+            grid-template-columns: 1fr 80px 120px 100px;
+            gap: 16px;
+            align-items: center;
+            border-left: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .object-item:hover {
+            background: #161b22;
+        }
+
+        .object-item.focused {
+            background: #1f2937;
+            border-left-color: #58a6ff;
+        }
+
+        .object-item.selected {
+            background: #0d419d;
+            color: #ffffff;
+            border-left-color: #ffffff;
+        }
+
+        .object-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .object-icon {
+            font-size: 12px;
+            width: 14px;
+            flex-shrink: 0;
+        }
+
+        .folder-icon {
+            color: #f0883e;
+        }
+
+        .file-icon {
+            color: #7d8590;
+        }
+
+        .object-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .object-type, .object-date, .object-size {
+            font-size: 11px;
+            color: #7d8590;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .object-item.selected .object-type,
+        .object-item.selected .object-date,
+        .object-item.selected .object-size {
+            color: #b6e3ff;
+        }
+
+        /* Footer - Status and keybindings */
+        .footer {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .status-info {
+            display: flex;
+            gap: 16px;
+            color: #7d8590;
+        }
+
+        .keybindings {
+            display: flex;
+            gap: 12px;
+            color: #7d8590;
+        }
+
+        .key {
+            background: #21262d;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 10px;
+            color: #f0f6fc;
+        }
+
+        /* Focus indicators */
+        .panel.focused {
+            border-right-color: #58a6ff;
+        }
+
+        .right-panel.focused {
+            border-left: 1px solid #58a6ff;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* Multi-select indicator */
+        .multi-select {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #58a6ff;
+            font-size: 10px;
+        }
+
+        .object-item {
+            position: relative;
+        }
+
+        .object-item.multi-selected::before {
+            content: "●";
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #58a6ff;
+            font-size: 8px;
+        }
+
+        /* Animation for selections */
+        .object-item, .bucket-item {
+            transition: all 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">S3 Browser</div>
+            <div class="status">
+                <span class="connected">●</span> aws-profile: production | us-east-1
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main">
+            <!-- Left panel - Buckets -->
+            <div class="left-panel panel focused" id="leftPanel">
+                <div class="panel-title">Buckets (5)</div>
+                <div class="bucket-list" id="bucketList">
+                    <!-- Buckets populated by JS -->
+                </div>
+            </div>
+
+            <!-- Right panel - Objects -->
+            <div class="right-panel" id="rightPanel">
+                <div class="breadcrumb-bar">
+                    <div class="breadcrumb">
+                        my-app-assets<span class="breadcrumb-sep">/</span>uploads<span class="breadcrumb-sep">/</span><span class="breadcrumb-current">images</span>
+                    </div>
+                </div>
+
+                <div class="list-header">
+                    <div>Name</div>
+                    <div>Type</div>
+                    <div>Modified</div>
+                    <div>Size</div>
+                </div>
+
+                <div class="object-list" id="objectList">
+                    <!-- Objects populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="status-info">
+                <span>3 selected</span>
+                <span>847 objects</span>
+                <span>12.4 GB</span>
+            </div>
+            <div class="keybindings">
+                <span><span class="key">Tab</span> Switch Panel</span>
+                <span><span class="key">Enter</span> Open</span>
+                <span><span class="key">Space</span> Select</span>
+                <span><span class="key">d</span> Download</span>
+                <span><span class="key">u</span> Upload</span>
+                <span><span class="key">Del</span> Delete</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const buckets = [
+            { name: 'my-app-assets', objects: 847, size: '12.4 GB', region: 'us-east-1' },
+            { name: 'backups-2024', objects: 156, size: '89.2 GB', region: 'us-east-1' },
+            { name: 'logs-archive', objects: 2341, size: '156.8 MB', region: 'us-west-2' },
+            { name: 'cdn-static', objects: 423, size: '3.7 GB', region: 'us-east-1' },
+            { name: 'user-uploads', objects: 1923, size: '45.2 GB', region: 'eu-west-1' }
+        ];
+
+        const objects = [
+            { name: '..', type: 'dir', size: '', modified: '', isFolder: true },
+            { name: 'avatars', type: 'dir', size: '', modified: '2024-01-20', isFolder: true },
+            { name: 'thumbnails', type: 'dir', size: '', modified: '2024-01-19', isFolder: true },
+            { name: 'temp', type: 'dir', size: '', modified: '2024-01-18', isFolder: true },
+            { name: 'hero-banner.jpg', type: 'jpg', size: '2.1M', modified: '2024-01-20 14:32', isFolder: false },
+            { name: 'logo-dark.svg', type: 'svg', size: '12K', modified: '2024-01-20 11:45', isFolder: false },
+            { name: 'logo-light.svg', type: 'svg', size: '11K', modified: '2024-01-20 11:45', isFolder: false },
+            { name: 'background.png', type: 'png', size: '4.7M', modified: '2024-01-19 16:22', isFolder: false },
+            { name: 'favicon.ico', type: 'ico', size: '4K', modified: '2024-01-18 09:15', isFolder: false },
+            { name: 'screenshot-1.png', type: 'png', size: '892K', modified: '2024-01-17 15:30', isFolder: false },
+            { name: 'screenshot-2.png', type: 'png', size: '743K', modified: '2024-01-17 15:28', isFolder: false }
+        ];
+
+        let activePanel = 'left'; // 'left' or 'right'
+        let selectedBucket = 0;
+        let focusedBucket = 0;
+        let focusedObject = 4; // Focus on hero-banner.jpg
+        let selectedObjects = new Set([4, 5, 6]); // Multi-select some items
+
+        function renderBuckets() {
+            const bucketList = document.getElementById('bucketList');
+            bucketList.innerHTML = '';
+
+            buckets.forEach((bucket, index) => {
+                const item = document.createElement('div');
+                let classes = 'bucket-item';
+                if (index === selectedBucket) classes += ' selected';
+                if (index === focusedBucket && activePanel === 'left') classes += ' focused';
+
+                item.className = classes;
+                item.innerHTML = `
+                    <div class="bucket-name">${bucket.name}</div>
+                    <div class="bucket-meta">${bucket.objects} objects • ${bucket.size}</div>
+                `;
+                bucketList.appendChild(item);
+            });
+        }
+
+        function renderObjects() {
+            const objectList = document.getElementById('objectList');
+            objectList.innerHTML = '';
+
+            objects.forEach((obj, index) => {
+                const item = document.createElement('div');
+                let classes = 'object-item';
+                if (selectedObjects.has(index)) classes += ' selected';
+                if (index === focusedObject && activePanel === 'right') classes += ' focused';
+                if (selectedObjects.has(index) && selectedObjects.size > 1) classes += ' multi-selected';
+
+                item.className = classes;
+
+                const icon = obj.isFolder ? '📁' : '📄';
+                const iconClass = obj.isFolder ? 'folder-icon' : 'file-icon';
+
+                item.innerHTML = `
+                    <div class="object-name">
+                        <span class="object-icon ${iconClass}">${icon}</span>
+                        <span class="object-text">${obj.name}</span>
+                    </div>
+                    <div class="object-type">${obj.type}</div>
+                    <div class="object-date">${obj.modified}</div>
+                    <div class="object-size">${obj.size}</div>
+                `;
+
+                objectList.appendChild(item);
+            });
+        }
+
+        function updatePanelFocus() {
+            const leftPanel = document.getElementById('leftPanel');
+            const rightPanel = document.getElementById('rightPanel');
+
+            leftPanel.classList.toggle('focused', activePanel === 'left');
+            rightPanel.classList.toggle('focused', activePanel === 'right');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'Tab':
+                    e.preventDefault();
+                    activePanel = activePanel === 'left' ? 'right' : 'left';
+                    updatePanelFocus();
+                    renderBuckets();
+                    renderObjects();
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (activePanel === 'left') {
+                        focusedBucket = Math.max(0, focusedBucket - 1);
+                        renderBuckets();
+                    } else {
+                        focusedObject = Math.max(0, focusedObject - 1);
+                        renderObjects();
+                    }
+                    break;
+
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (activePanel === 'left') {
+                        focusedBucket = Math.min(buckets.length - 1, focusedBucket + 1);
+                        renderBuckets();
+                    } else {
+                        focusedObject = Math.min(objects.length - 1, focusedObject + 1);
+                        renderObjects();
+                    }
+                    break;
+
+                case 'Enter':
+                    if (activePanel === 'left') {
+                        selectedBucket = focusedBucket;
+                        renderBuckets();
+                    } else {
+                        // Open folder or file
+                        console.log('Opening:', objects[focusedObject].name);
+                    }
+                    break;
+
+                case ' ':
+                    e.preventDefault();
+                    if (activePanel === 'right') {
+                        if (selectedObjects.has(focusedObject)) {
+                            selectedObjects.delete(focusedObject);
+                        } else {
+                            selectedObjects.add(focusedObject);
+                        }
+                        renderObjects();
+                    }
+                    break;
+            }
+        });
+
+        // Initialize
+        renderBuckets();
+        renderObjects();
+        updatePanelFocus();
+    </script>
+</body>
+</html>
