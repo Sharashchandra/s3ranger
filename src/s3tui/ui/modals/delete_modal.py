@@ -12,6 +12,19 @@ from textual.widgets import Button, Label, Static
 from s3tui.gateways.s3 import S3
 
 
+# UI Element IDs
+class DeleteModalIDs:
+    """Constants for UI element IDs."""
+
+    DELETE_MODAL = "delete-modal"
+    MODAL_TITLE = "modal-title"
+    FORM_CONTAINER = "form-container"
+    SOURCE_PATH = "source-path"
+    BUTTON_CONTAINER = "button-container"
+    DELETE_BUTTON = "delete-btn"
+    CANCEL_BUTTON = "cancel-btn"
+
+
 class DeleteModal(ModalScreen):
     """Modal screen for deleting S3 objects."""
 
@@ -30,16 +43,16 @@ class DeleteModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         """Create the layout for the delete modal."""
-        with Vertical(id="delete-modal"):
-            yield Static("Confirm Deletion", id="modal-title")
+        with Vertical(id=DeleteModalIDs.DELETE_MODAL):
+            yield Static("Confirm Deletion", id=DeleteModalIDs.MODAL_TITLE)
 
-            with Vertical(id="form-container"):
+            with Vertical(id=DeleteModalIDs.FORM_CONTAINER):
                 yield Label("Are you sure you want to permanently delete?")
-                yield Static(self.s3_path, id="source-path")
+                yield Static(self.s3_path, id=DeleteModalIDs.SOURCE_PATH)
 
-            with Horizontal(id="button-container"):
-                yield Button("Delete", variant="error", id="delete-btn")
-                yield Button("Cancel", variant="default", id="cancel-btn")
+            with Horizontal(id=DeleteModalIDs.BUTTON_CONTAINER):
+                yield Button("Delete", variant="error", id=DeleteModalIDs.DELETE_BUTTON)
+                yield Button("Cancel", variant="default", id=DeleteModalIDs.CANCEL_BUTTON)
 
     def action_dismiss(self) -> None:
         """Dismiss the modal."""
@@ -47,52 +60,35 @@ class DeleteModal(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
-        if event.button.id == "cancel-btn":
+        if event.button.id == DeleteModalIDs.CANCEL_BUTTON:
             self.action_dismiss()
-        elif event.button.id == "delete-btn":
-            self._start_delete()
-
-    def _start_delete(self) -> None:
-        """Start the delete process."""
-        # Disable the delete button and show loading state
-        delete_btn = self.query_one("#delete-btn", Button)
-        delete_btn.disabled = True
-        delete_btn.label = "Deleting..."
-
-        # Start delete in background
-        self._delete_item()
+        elif event.button.id == DeleteModalIDs.DELETE_BUTTON:
+            self._delete_item()
 
     @work(exclusive=True)
     async def _delete_item(self) -> None:
         """Delete the file or folder in a background thread."""
         try:
-            # Check if this is a folder (ends with '/') or file
-            is_folder = self.s3_path.endswith("/")
+            # item_name = extract_item_name_from_s3_path(self.s3_path)
+            item_name = Path(self.s3_path).name
 
-            if is_folder:
-                # Delete the entire folder
+            if self.s3_path.endswith("/"):
                 S3.delete_directory(s3_uri=self.s3_path)
-
-                # Extract folder name for success message
-                folder_name = self.s3_path.rstrip("/").split("/")[-1]
-                success_msg = f"Successfully deleted folder '{folder_name}'"
+                success_msg = f"Successfully deleted folder '{item_name}'"
             else:
-                # Delete a single file
                 S3.delete_file(s3_uri=self.s3_path)
+                success_msg = f"Successfully deleted '{item_name}'"
 
-                # Extract file name for success message
-                file_name = Path(self.s3_path).name
-                success_msg = f"Successfully deleted '{file_name}'"
-
-            # Show success notification and close modal
-            self.notify(success_msg, severity="information")
-            self.dismiss(True)  # Return True to indicate successful deletion
+            self._show_success_and_close(success_msg)
 
         except Exception as e:
-            # Re-enable delete button and show error
-            delete_btn = self.query_one("#delete-btn", Button)
-            delete_btn.disabled = False
-            delete_btn.label = "Delete"
+            self._show_error(f"Delete failed: {str(e)}")
 
-            error_msg = f"Delete failed: {str(e)}"
-            self.notify(error_msg, severity="error")
+    def _show_success_and_close(self, message: str) -> None:
+        """Show success notification and close modal."""
+        self.notify(message, severity="information")
+        self.dismiss(True)  # Return True to indicate successful deletion
+
+    def _show_error(self, message: str) -> None:
+        """Show error notification."""
+        self.notify(message, severity="error")
