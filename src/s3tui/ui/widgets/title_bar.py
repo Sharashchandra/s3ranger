@@ -2,6 +2,8 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Static
 
+from s3tui.ui.utils import get_current_aws_profile
+
 
 class TitleBar(Static):
     """Title bar widget matching the HTML design"""
@@ -11,4 +13,4 @@ class TitleBar(Static):
             yield Static("S3 Browser", id="title")
             with Horizontal(id="status-container"):
                 yield Static("●", id="connected-indicator")
-                yield Static("aws-profile: production | us-east-1", id="aws-info")
+                yield Static(f"aws-profile: {get_current_aws_profile()}", id="aws-info")

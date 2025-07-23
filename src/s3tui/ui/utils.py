@@ -1,6 +1,8 @@
 from collections import namedtuple
 from urllib.parse import urlparse
 
+import boto3
+
 
 def build_s3_uri(bucket_name: str, object_key: str = "") -> str:
     """Build an S3 URI from bucket and object key."""
@@ -110,3 +112,22 @@ def get_parent_path(path: str) -> str:
     if "/" in path:
         return "/".join(path.split("/")[:-1])
     return ""
+
+
+def get_current_aws_profile() -> str:
+    """Get the current AWS profile name.
+
+    Returns:
+        The name of the current AWS profile
+    """
+    try:
+        session = boto3.session.Session()
+        profiles = session.available_profiles
+        if profiles:
+            # If a profile is set via environment or config, use that
+            # Otherwise, return the first available profile
+            current_profile = session.profile_name or profiles[0]
+            return current_profile
+        return "default"
+    except Exception:
+        return "default"

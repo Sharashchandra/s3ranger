@@ -1,12 +1,40 @@
-/* S3TUI Color Palette and Typography */
+/*
+ * S3TUI - Clean and Organized Styles
+ * Organized by: Global -> MainScreen -> Widgets -> Common Elements
+ */
 
-/* Global App Styling */
+/* ====================================
+ * GLOBAL APP STYLES
+ * ==================================== */
 App {
     background: #0d1117;
     color: #c9d1d9;
 }
 
-/* Title Bar Styling */
+/* Common text styling */
+Static {
+    text-style: none;
+    background: transparent;
+}
+
+/* ====================================
+ * MAIN SCREEN LAYOUT
+ * ==================================== */
+#main-container {
+    background: #0d1117;
+    border: solid #30363d;
+    layout: vertical;
+    height: 100%;
+}
+
+#content-container {
+    layout: horizontal;
+    height: 1fr;
+}
+
+/* ====================================
+ * TITLE BAR WIDGET
+ * ==================================== */
 TitleBar {
     dock: top;
     height: auto;
@@ -45,14 +73,253 @@ TitleBar {
     text-style: none;
 }
 
-/* Main Container */
-#main-container {
+/* ====================================
+ * BUCKET LIST WIDGET
+ * ==================================== */
+BucketList {
+    width: 40;
     background: #0d1117;
-    border: solid #30363d;
+    border-right: solid #30363d;
+    height: 100%;
 }
 
-/* Common text styling */
-Static {
+#bucket-list-container {
+    width: 100%;
+    background: #0d1117;
+    height: 100%;
+}
+
+#bucket-panel-title {
+    dock: top;
+    height: 2;
+    background: #161b22;
+    border-bottom: solid #30363d;
+    color: #f0f6fc;
+    content-align: center middle;
     text-style: none;
+    padding: 0 1;
+}
+
+#bucket-list-view {
+    background: #0d1117;
+    scrollbar-background: #0d1117;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #484f58;
+    scrollbar-size: 1 1;
+    height: 1fr;
+}
+
+/* ====================================
+ * BUCKET ITEM COMPONENT
+ * ==================================== */
+BucketItem {
+    height: auto;
+    padding: 1 1;
+    border-left: solid transparent;
+    border-bottom: none;
+    background: #0d1117;
+}
+
+BucketItem:hover {
+    background: #161b22;
+}
+
+BucketItem > * {
     background: transparent;
+}
+
+/* Bucket Item Selection States */
+BucketItem.-active,
+BucketItem:focus,
+BucketItem.-highlight {
+    background: #0969da;
+    color: #ffffff;
+    border-left: solid #ffffff;
+}
+
+BucketItem.-active .bucket-name,
+BucketItem:focus .bucket-name,
+BucketItem.-highlight .bucket-name {
+    color: #ffffff;
+}
+
+BucketItem.-active .bucket-meta,
+BucketItem:focus .bucket-meta,
+BucketItem.-highlight .bucket-meta {
+    color: #b6e3ff;
+}
+
+/* ListView Selection States (consolidated) */
+ListView > ListItem.-active,
+ListView > ListItem:focus,
+ListView > ListItem.-cursor {
+    background: #0969da;
+    color: #ffffff;
+    border-left: solid #ffffff;
+}
+
+ListView > ListItem.-active .bucket-name,
+ListView > ListItem:focus .bucket-name,
+ListView > ListItem.-cursor .bucket-name {
+    color: #ffffff;
+}
+
+ListView > ListItem.-active .bucket-meta,
+ListView > ListItem:focus .bucket-meta,
+ListView > ListItem.-cursor .bucket-meta {
+    color: #b6e3ff;
+}
+
+/* Bucket Item Text Elements */
+.bucket-name {
+    color: #c9d1d9;
+    text-style: none;
+    height: auto;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    text-wrap: wrap;
+}
+
+.bucket-meta {
+    color: #7d8590;
+    text-style: none;
+    height: 1;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+/* ====================================
+ * OBJECT LIST WIDGET
+ * ==================================== */
+ObjectList {
+    width: 1fr;
+    background: #0d1117;
+    height: 100%;
+    min-width: 0;
+}
+
+#object-list-container {
+    width: 100%;
+    background: #0d1117;
+    height: 100%;
+    layout: vertical;
+    margin: 0;
+    padding: 0;
+}
+
+/* ====================================
+ * BREADCRUMB WIDGET
+ * ==================================== */
+Breadcrumb {
+    height: 2;
+    padding: 0 1;
+    background: #161b22;
+    color: #f0f6fc;
+    border-bottom: solid #30363d;
+    text-style: none;
+    content-align: left middle;
+}
+
+Breadcrumb:hover {
+    background: #1f2937;
+}
+
+#breadcrumb-bar {
+    dock: top;
+    height: 2;
+    min-height: 2;
+    background: #161b22;
+    border-bottom: solid #30363d;
+    padding: 0 1;
+    color: #f0f6fc;
+    content-align: left middle;
+    margin: 0;
+    width: 100%;
+    visibility: visible;
+}
+
+#object-table {
+    background: #0d1117;
+    height: 1fr;
+    width: 100%;
+    scrollbar-background: #0d1117;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #484f58;
+    scrollbar-size: 1 1;
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* DataTable styling for object list */
+DataTable {
+    background: #0d1117;
+    color: #c9d1d9;
+    border: none;
+    height: 1fr;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    min-width: 100%;
+    overflow: auto;
+}
+
+DataTable > .datatable--header {
+    background: #161b22;
+    color: #7d8590;
+    border-bottom: solid #30363d;
+    padding: 0 1;
+    height: auto;
+    min-height: 2;
+    width: 100%;
+}
+
+DataTable > .datatable--body {
+    width: 100%;
+    min-width: 100%;
+}
+
+DataTable > .datatable--header-hover {
+    background: #1f2937;
+}
+
+DataTable > .datatable--cursor {
+    background: #0d1117;
+    color: #58a6ff;
+    border-left: thick #58a6ff;
+}
+
+DataTable > .datatable--cursor-hover {
+    background: #0d419d;
+    color: #ffffff;
+    border-left: thick #ffffff;
+}
+
+DataTable > .datatable--odd-row {
+    background: #0d1117;
+}
+
+DataTable > .datatable--even-row {
+    background: #0d1117;
+}
+
+DataTable > .datatable--hover {
+    background: #161b22;
+}
+
+/* Remove zebra stripes and focus on clean lines */
+DataTable .datatable--row {
+    border-left: thick transparent;
+}
+
+DataTable .datatable--row:hover {
+    background: #161b22;
+}
+
+DataTable .datatable--row.-cursor {
+    background: #0d1117;
+    color: #58a6ff;
+    border-left: thick #58a6ff;
 }
