@@ -1,6 +1,7 @@
 """Download modal for S3TUI."""
 
 import os
+import threading
 from pathlib import Path
 
 from textual import work
@@ -8,7 +9,7 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Static
+from textual.widgets import Button, Input, Label, LoadingIndicator, Static
 from textual_fspicker import SelectDirectory
 
 from s3tui.gateways.s3 import S3
@@ -29,6 +30,7 @@ class DownloadModal(ModalScreen[bool]):
     s3_path: str = reactive("")
     destination_path: str = reactive("~/Downloads/")
     is_folder: bool = reactive(False)
+    is_downloading: bool = reactive(False)
 
     def __init__(self, s3_path: str, is_folder: bool = False) -> None:
         """Initialize the download modal.
@@ -44,6 +46,9 @@ class DownloadModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
         with Container(id="download-dialog"):
+            # Loading indicator (hidden by default)
+            yield LoadingIndicator(id="download-loading")
+
             # Dialog header
             with Container(id="download-dialog-header"):
                 yield Label("Download Files", classes="dialog-title")
@@ -104,6 +109,30 @@ class DownloadModal(ModalScreen[bool]):
         destination_input.value = FILE_PICKER_DEFAULT_PATH
         destination_input.focus()
 
+    def watch_is_downloading(self, is_downloading: bool) -> None:
+        """React to downloading state changes."""
+        try:
+            loading_indicator = self.query_one("#download-loading", LoadingIndicator)
+            dialog_header = self.query_one("#download-dialog-header", Container)
+            dialog_content = self.query_one("#download-dialog-content", Container)
+            dialog_footer = self.query_one("#download-dialog-footer", Container)
+
+            if is_downloading:
+                # Show loading indicator and hide other content
+                loading_indicator.display = True
+                dialog_header.display = False
+                dialog_content.display = False
+                dialog_footer.display = False
+            else:
+                # Hide loading indicator and show other content
+                loading_indicator.display = False
+                dialog_header.display = True
+                dialog_content.display = True
+                dialog_footer.display = True
+        except Exception:
+            # Widgets not ready yet, silently ignore
+            pass
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "cancel-btn":
@@ -136,6 +165,15 @@ class DownloadModal(ModalScreen[bool]):
         # Expand tilde to home directory
         destination = os.path.expanduser(destination)
 
+        # Start loading and perform download asynchronously
+        self.is_downloading = True
+
+        # Use threading to download asynchronously
+        thread = threading.Thread(target=self._download_async, args=(destination,), daemon=True)
+        thread.start()
+
+    def _download_async(self, destination: str) -> None:
+        """Asynchronously perform the download operation."""
         try:
             # Create destination directory if it doesn't exist
             Path(destination).mkdir(parents=True, exist_ok=True)
@@ -143,19 +181,35 @@ class DownloadModal(ModalScreen[bool]):
             # Perform the download
             if self.is_folder:
                 S3.download_directory(s3_uri=self.s3_path, local_dir_path=destination)
-                self.notify(f"Directory downloaded to {destination}", severity="success")
+                message = f"Directory downloaded to {destination}"
             else:
                 S3.download_file(s3_uri=self.s3_path, local_dir_path=destination)
-                self.notify(f"File downloaded to {destination}", severity="success")
+                message = f"File downloaded to {destination}"
 
-            self.dismiss(True)
+            # Update state on the main thread using call_later
+            self.app.call_later(lambda: self._on_download_success(message))
 
         except Exception as e:
-            self.notify(f"Download failed: {str(e)}", severity="error")
+            # Handle download errors gracefully - capture exception in closure
+            error = e
+            self.app.call_later(lambda: self._on_download_error(error))
+
+    def _on_download_success(self, message: str) -> None:
+        """Handle successful download completion."""
+        self.is_downloading = False
+        self.notify(message, severity="success")
+        self.dismiss(True)
+
+    def _on_download_error(self, error: Exception) -> None:
+        """Handle download error."""
+        self.is_downloading = False
+        self.notify(f"Download failed: {str(error)}", severity="error")
 
     @work
     async def action_file_picker(self) -> None:
         if path := await self.app.push_screen_wait(SelectDirectory(location=FILE_PICKER_DEFAULT_PATH)):
+            path = f"{path}/"  # Ensure path is a string
             destination_input = self.query_one("#destination-input", Input)
-            destination_input.value = str(path)
+            destination_input.value = path
+            destination_input.cursor_position = len(path)
             destination_input.focus()
