@@ -290,3 +290,37 @@ class ObjectList(Static):
     def set_bucket(self, bucket_name: str) -> None:
         """Set the current bucket and load its objects."""
         self.current_bucket = bucket_name
+
+    def get_focused_object(self) -> dict | None:
+        """Get the currently focused object in the table."""
+        try:
+            table = self.query_one("#object-table", DataTable)
+            if table.cursor_row is None or not self.objects:
+                return None
+
+            cursor_row = table.cursor_row
+            if 0 <= cursor_row < len(self.objects):
+                return self.objects[cursor_row]
+            return None
+        except Exception:
+            return None
+
+    def get_s3_uri_for_focused_object(self) -> str | None:
+        """Get the S3 URI for the currently focused object."""
+        focused_obj = self.get_focused_object()
+        if not focused_obj or not self.current_bucket:
+            return None
+
+        # Handle parent directory case
+        if focused_obj["key"] == "..":
+            return None
+
+        # Construct the full S3 path from breadcrumb (current prefix) + object key
+        if focused_obj["is_folder"]:
+            # For folders, combine current prefix with folder name
+            full_path = f"{self.current_prefix}{focused_obj['key']}/"
+        else:
+            # For files, combine current prefix with file name
+            full_path = f"{self.current_prefix}{focused_obj['key']}"
+
+        return f"s3://{self.current_bucket}/{full_path}"

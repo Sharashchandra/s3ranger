@@ -346,3 +346,238 @@ DataTable .datatable--row.-cursor {
     color: #58a6ff;
     border-left: thick #58a6ff;
 }
+
+/* ====================================
+ * DOWNLOAD MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+DownloadModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+/* Main dialog container */
+#download-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 25;
+    max-height: 50;
+    background: #161b22;
+    border: solid #30363d;
+}
+
+/* Dialog header */
+#download-dialog-header {
+    height: auto;
+    width: 100%;
+    background: #1f2937;
+    border-bottom: solid #30363d;
+    padding: 1;
+}
+
+.dialog-title {
+    color: #f0f6fc;
+    text-style: none;
+    margin-bottom: 1;
+}
+
+.dialog-subtitle {
+    color: #7d8590;
+    text-style: none;
+}
+
+/* Dialog content */
+#download-dialog-content {
+    padding: 1 2;
+    height: auto;
+    width: 100%;
+}
+
+.field-group {
+    height: auto;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+.field-label {
+    color: #f0f6fc;
+    text-style: none;
+    margin-bottom: 0;
+}
+
+.field-value {
+    background: #0d1117;
+    border: solid #30363d;
+    padding: 1 2;
+    color: #c9d1d9;
+    width: 100%;
+}
+
+.field-value.readonly {
+    background: #21262d;
+    color: #7d8590;
+}
+
+#source-field {
+    background: #21262d;
+    color: #7d8590;
+    border: solid #30363d;
+    padding: 0 1;
+    height: 3;
+    width: 100%;
+    overflow: scroll;
+    text-overflow: fold;
+}
+
+.field-input {
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+    width: 100%;
+}
+
+.field-input:focus {
+    border: solid #58a6ff;
+    background: #0d1117;
+}
+
+#destination-input {
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+    width: 1fr;
+}
+
+#destination-input:focus {
+    border: solid #58a6ff;
+}
+
+/* Input with button container */
+.input-with-button {
+    layout: horizontal;
+    width: 100%;
+    height: auto;
+    align: left middle;
+}
+
+/* File picker button */
+.file-picker-button {
+    background: transparent;
+    border: none;
+    color: #c9d1d9;
+    width: auto;
+    min-width: 4;
+    height: 3;
+    margin-left: 1;
+    padding: 0 1;
+}
+
+.file-picker-button:hover {
+    background: #30363d;
+    border: none;
+}
+
+.file-picker-button:focus {
+    background: #30363d;
+    border: none;
+}
+
+.field-help {
+    color: #7d8590;
+    text-style: none;
+    margin-top: 0;
+}
+
+/* Dialog footer */
+#download-dialog-footer {
+    height: auto;
+    min-height: 6;
+    width: 100%;
+    background: #1f2937;
+    border-top: solid #30363d;
+    padding: 1;
+    layout: horizontal;
+    content-align: left middle;
+}
+
+.footer-content {
+    height: auto;
+    width: 100%;
+    layout: horizontal;
+    content-align: left middle;
+}
+
+.keybindings-section {
+    height: auto;
+    width: 1fr;
+    layout: vertical;
+    content-align: left top;
+}
+
+.dialog-keybindings-row {
+    height: auto;
+    width: 100%;
+    layout: horizontal;
+    content-align: left middle;
+    margin-bottom: 1;
+}
+
+.dialog-keybindings {
+    height: auto;
+    width: 1fr;
+    layout: horizontal;
+    content-align: left middle;
+}
+
+.keybinding {
+    color: #7d8590;
+    text-style: none;
+    margin-right: 2;
+    width: 1fr;
+    height: auto;
+}
+
+.dialog-actions {
+    height: auto;
+    width: auto;
+    layout: horizontal;
+    content-align: right middle;
+    align: right middle;
+}
+
+.dialog-actions Button {
+    margin-left: 1;
+    background: #48505bff;
+    border: none;
+    color: #c9d1d9;
+    min-width: 12;
+    height: 3;
+    padding: 0 2;
+}
+
+.dialog-actions Button:hover {
+    background: #30363d;
+    border: solid #484f58;
+    color: #f0f6fc;
+}
+
+
+.dialog-actions Button.primary {
+    background: #3fb950;
+    border: solid #3fb950;
+    color: #000000;
+}
+
+.dialog-actions Button.primary:hover {
+    background: #2ea043;
+    border: solid #2ea043;
+    color: #000000;
+}
+
+.dialog-actions Button:disabled {
+    background: #161b22;
+    border: solid #21262d;
+    color: #484f58;
+}

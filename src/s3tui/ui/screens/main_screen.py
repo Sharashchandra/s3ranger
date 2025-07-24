@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer
 
+from s3tui.ui.modals.download_modal import DownloadModal
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
 from s3tui.ui.widgets.title_bar import TitleBar
@@ -62,7 +63,26 @@ class MainScreen(Screen):
 
     def action_download(self) -> None:
         """Download selected items"""
-        self.notify("Download functionality not yet implemented", severity="error")
+        object_list = self.query_one("#object-list", ObjectList)
+
+        # Get the currently focused object
+        s3_uri = object_list.get_s3_uri_for_focused_object()
+        focused_obj = object_list.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for download", severity="error")
+            return
+
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
+
+        # Show the download modal
+        def on_download_result(result: bool) -> None:
+            if result:
+                # Download was successful, refresh the view if needed
+                pass
+
+        self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
     def action_upload(self) -> None:
         """Upload files to current location"""
