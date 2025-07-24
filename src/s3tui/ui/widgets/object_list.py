@@ -30,6 +30,7 @@ class ObjectList(Static):
 
     # Private cache for all bucket objects
     _all_objects: list[dict] = []
+    _table_mounted: bool = False
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -44,11 +45,11 @@ class ObjectList(Static):
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
             yield LoadingIndicator(id="object-loading")
-            yield DataTable(id="object-table")
 
     def on_mount(self) -> None:
         """Initialize the widget when mounted."""
-        self._setup_table()
+        # Don't setup table immediately - wait for bucket selection
+        pass
 
     def _setup_table(self) -> None:
         """Configure the data table columns and styling."""
@@ -57,9 +58,21 @@ class ObjectList(Static):
         table.cursor_type = "row"
         table.zebra_stripes = False
 
+    def _ensure_table_mounted(self) -> None:
+        """Ensure the datatable is mounted and configured."""
+        if not self._table_mounted:
+            # Mount the datatable
+            container = self.query_one("#object-list-container", Vertical)
+            table = DataTable(id="object-table")
+            container.mount(table)
+            self._setup_table()
+            self._table_mounted = True
+
     def _focus_first_row(self) -> None:
         """Focus on the first row in the object table."""
         try:
+            if not self._table_mounted:
+                return
             table = self.query_one("#object-table", DataTable)
             if table.row_count > 0:
                 table.focus()
@@ -71,6 +84,8 @@ class ObjectList(Static):
     def watch_current_bucket(self, bucket_name: str) -> None:
         """React to bucket changes."""
         if bucket_name:
+            # Mount the datatable when a bucket is selected for the first time
+            self._ensure_table_mounted()
             self.current_prefix = ""
             self._update_breadcrumb()
             self._load_bucket_objects()
@@ -90,14 +105,18 @@ class ObjectList(Static):
         """React to loading state changes."""
         try:
             loading_indicator = self.query_one("#object-loading", LoadingIndicator)
-            table = self.query_one("#object-table", DataTable)
 
-            if is_loading:
-                loading_indicator.display = True
-                table.display = False
+            if self._table_mounted:
+                table = self.query_one("#object-table", DataTable)
+                if is_loading:
+                    loading_indicator.display = True
+                    table.display = False
+                else:
+                    loading_indicator.display = False
+                    table.display = True
             else:
-                loading_indicator.display = False
-                table.display = True
+                # If table not mounted, just show/hide loading indicator
+                loading_indicator.display = is_loading
         except Exception:
             # Widgets not ready yet, silently ignore
             pass
@@ -224,6 +243,9 @@ class ObjectList(Static):
 
     def _update_table_display(self) -> None:
         """Update the table with current objects."""
+        if not self._table_mounted:
+            return
+
         table = self.query_one("#object-table", DataTable)
         table.clear(columns=False)
 
@@ -294,6 +316,8 @@ class ObjectList(Static):
     def get_focused_object(self) -> dict | None:
         """Get the currently focused object in the table."""
         try:
+            if not self._table_mounted:
+                return None
             table = self.query_one("#object-table", DataTable)
             if table.cursor_row is None or not self.objects:
                 return None
@@ -324,3 +348,16 @@ class ObjectList(Static):
             full_path = f"{self.current_prefix}{focused_obj['key']}"
 
         return f"s3://{self.current_bucket}/{full_path}"
+
+    def focus(self) -> None:
+        """Override focus to only focus the table if it's mounted."""
+        if self._table_mounted:
+            try:
+                table = self.query_one("#object-table", DataTable)
+                table.focus()
+            except Exception:
+                # Table not ready, focus the widget itself
+                super().focus()
+        else:
+            # If table not mounted, focus the widget itself
+            super().focus()
