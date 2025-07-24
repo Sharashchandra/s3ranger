@@ -368,6 +368,17 @@ DownloadModal {
     border: solid #30363d;
 }
 
+/* Download loading indicator */
+#download-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #161b22;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
 /* Dialog header */
 #download-dialog-header {
     height: auto;
