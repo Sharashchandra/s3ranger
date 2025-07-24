@@ -1,167 +1,99 @@
-"""Main screen for the S3TUI application."""
-
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Footer, Static
+from textual.widgets import Footer
 
-from s3tui.ui.constants import WidgetIDs
-from s3tui.ui.modals.delete_modal import DeleteModal
 from s3tui.ui.modals.download_modal import DownloadModal
-from s3tui.ui.modals.upload_modal import UploadModal
-from s3tui.ui.utils import build_s3_uri
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
-from s3tui.ui.widgets.path_bar import PathBar
+from s3tui.ui.widgets.title_bar import TitleBar
 
 
 class MainScreen(Screen):
-    """Main screen displaying S3 buckets and contents."""
+    """Main screen displaying S3 buckets and objects."""
 
     BINDINGS = [
-        Binding("u", "upload", "Upload"),
-        Binding("d", "download", "Download"),
-        Binding("y", "delete", "Delete"),
-        Binding("r", "refresh", "Refresh"),
         Binding("q", "quit", "Quit"),
+        Binding("tab", "switch_panel", "Switch Panel"),
+        Binding("enter", "open_item", "Open"),
+        Binding("space", "select_item", "Select"),
+        Binding("d", "download", "Download"),
+        Binding("u", "upload", "Upload"),
+        Binding("delete", "delete_item", "Delete"),
+        Binding("r", "refresh", "Refresh"),
     ]
-
-    def __init__(self):
-        super().__init__()
-        self.selected_bucket = None
-        self.selected_object = None
 
     def compose(self) -> ComposeResult:
         """Create the layout for the main screen."""
-        with Container(id=WidgetIDs.MAIN_CONTAINER_ID):
-            # Path bar at the top
-            yield PathBar(id=WidgetIDs.PATH_BAR_ID)
-
-            with Horizontal(id=WidgetIDs.CONTENT_AREA_ID):
-                # Left panel for buckets
-                with Vertical(id=WidgetIDs.BUCKET_PANEL_ID):
-                    yield Static("Buckets", id=WidgetIDs.BUCKET_HEADER_ID)
-                    yield BucketList(id=WidgetIDs.BUCKET_LIST_ID)
-
-                # Right panel for bucket contents
-                with Vertical(id=WidgetIDs.CONTENT_PANEL_ID):
-                    yield Static("Contents", id=WidgetIDs.CONTENT_HEADER_ID)
-                    yield ObjectList(id=WidgetIDs.OBJECT_LIST_ID)
+        with Container(id="main-container"):
+            yield TitleBar(id="title-bar")
+            with Container(id="content-container"):
+                yield BucketList(id="bucket-list")
+                yield ObjectList(id="object-list")
 
             # Footer with key bindings
             yield Footer()
 
-    # Widget helper methods
-    def _get_path_bar(self) -> PathBar:
-        """Get the PathBar widget."""
-        return self.query_one(f"#{WidgetIDs.PATH_BAR_ID}", PathBar)
+    def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
+        """Handle bucket selection from BucketList widget"""
+        object_list = self.query_one("#object-list", ObjectList)
+        object_list.set_bucket(message.bucket_name)
 
-    def _get_object_list(self) -> ObjectList:
-        """Get the ObjectList widget."""
-        return self.query_one(f"#{WidgetIDs.OBJECT_LIST_ID}", ObjectList)
+    def action_switch_panel(self) -> None:
+        """Switch focus between bucket list and object list"""
+        bucket_list = self.query_one("#bucket-list", BucketList)
+        object_list = self.query_one("#object-list", ObjectList)
 
-    def _get_bucket_list(self) -> BucketList:
-        """Get the BucketList widget."""
-        return self.query_one(f"#{WidgetIDs.BUCKET_LIST_ID}", BucketList)
+        # Toggle focus between panels
+        if bucket_list.has_focus:
+            object_list.focus()
+        else:
+            bucket_list.focus()
 
-    def _refresh_object_list(self) -> None:
-        """Refresh the object list to show updated state."""
-        object_list = self._get_object_list()
-        object_list.refresh_objects()
+    def action_open_item(self) -> None:
+        """Open the currently focused item"""
+        # This will be handled by the individual widgets
+        pass
 
-    def _determine_upload_destination(self) -> str | None:
-        """Determine the upload destination based on current selection."""
-        if self.selected_object:
-            # If an object/folder is selected, upload to that location
-            return self.selected_object
-        elif self.selected_bucket:
-            # If only a bucket is selected, upload to bucket root
-            return build_s3_uri(self.selected_bucket)
-        return None
-
-    def get_current_path(self) -> str:
-        """Get the current path from the PathBar."""
-        path_bar = self._get_path_bar()
-        return path_bar.get_path()
+    def action_select_item(self) -> None:
+        """Select/multi-select the currently focused item"""
+        # This will be handled by the object list widget
+        pass
 
     def action_download(self) -> None:
-        """Download the currently selected S3 object."""
-        if not self.selected_object:
+        """Download selected items"""
+        object_list = self.query_one("#object-list", ObjectList)
+
+        # Get the currently focused object
+        s3_uri = object_list.get_s3_uri_for_focused_object()
+        focused_obj = object_list.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for download", severity="error")
             return
 
-        modal = DownloadModal(self.selected_object)
-        self.app.push_screen(modal)
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
 
-    def action_delete(self) -> None:
-        """Delete the currently selected S3 object."""
-        if not self.selected_object:
-            return
+        # Show the download modal
+        def on_download_result(result: bool) -> None:
+            if result:
+                # Download was successful, refresh the view if needed
+                pass
 
-        modal = DeleteModal(self.selected_object)
-        self.app.push_screen(modal, self._on_delete_complete)
+        self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
     def action_upload(self) -> None:
-        """Upload a file to the currently selected S3 location."""
-        destination = self._determine_upload_destination()
-        if not destination:
-            return
+        """Upload files to current location"""
+        self.notify("Upload functionality not yet implemented", severity="error")
 
-        modal = UploadModal(destination)
-        self.app.push_screen(modal, self._on_upload_complete)
+    def action_delete_item(self) -> None:
+        """Delete selected items"""
+        self.notify("Delete functionality not yet implemented", severity="error")
 
     def action_refresh(self) -> None:
-        """Refresh the current view."""
-        bucket_list = self._get_bucket_list()
-        bucket_list.refresh_buckets()
-
-        # Also refresh object list if a bucket is selected
-        if self.selected_bucket:
-            self._refresh_object_list()
-
-    def _on_upload_complete(self, uploaded: bool) -> None:
-        """Handle the result of the upload operation."""
-        if uploaded:
-            self._refresh_object_list()
-
-    def _on_delete_complete(self, deleted: bool) -> None:
-        """Handle the result of the delete operation."""
-        if deleted:
-            self._refresh_object_list()
-
-    def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
-        """Handle bucket selection from the bucket list widget."""
-        bucket_name = message.bucket_name
-        self.selected_bucket = bucket_name
-
-        # Update path using PathBar widget
-        path_bar = self._get_path_bar()
-        path_bar.navigate_to_bucket(bucket_name)
-
-        # Focus on the object list
-        object_list = self._get_object_list()
-        object_list.focus()
-
-        # Load bucket contents using the ObjectList widget
-        object_list.run_worker(object_list.load_objects_for_bucket(bucket_name))
-
-    def on_object_list_object_selected(self, message: ObjectList.ObjectSelected) -> None:
-        """Handle object selection from the object list widget."""
-        object_key = message.object_key
-        bucket_name = message.bucket_name
-
-        # Store selected object for download functionality
-        self.selected_object = build_s3_uri(bucket_name, object_key)
-
-        # Update path to show the selected object
-        path_bar = self._get_path_bar()
-        path_bar.update_path(self.selected_object)
-
-    def on_object_list_folder_navigated(self, message: ObjectList.FolderNavigated) -> None:
-        """Handle folder navigation from the object list widget."""
-        folder_path = message.folder_path
-        bucket_name = message.bucket_name
-
-        # Update path bar to show the current folder
-        path_bar = self._get_path_bar()
-        path_bar.navigate_to_folder(bucket_name, folder_path)
+        """Refresh the current view"""
+        bucket_list = self.query_one("#bucket-list", BucketList)
+        bucket_list.load_buckets()
+        self.notify("Refreshed bucket list")

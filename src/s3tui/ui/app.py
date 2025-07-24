@@ -9,7 +9,7 @@ from s3tui.ui.screens.main_screen import MainScreen
 class S3TUI(App):
     """S3 Terminal UI application."""
 
-    TITLE = "s3tui - AWS S3 Terminal UI"
+    TITLE = "S3 Browser"
     CSS_PATH = "app.tcss"
 
     BINDINGS = [

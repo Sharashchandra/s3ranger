@@ -140,9 +140,17 @@ class S3:
         local_dir_path: str,
     ) -> None:
         """Download a file from S3."""
-        local_file_path = os.path.join(local_dir_path, os.path.basename(prefix))
-        if not os.path.exists(local_dir_path):
-            os.makedirs(local_dir_path)
+        if local_dir_path.endswith("/"):
+            # local_dir_path is a directory, extract filename from S3 prefix
+            local_file_path = os.path.join(local_dir_path, os.path.basename(prefix))
+            directory_path = local_dir_path
+        else:
+            # local_dir_path contains filename
+            local_file_path = local_dir_path
+            directory_path = os.path.dirname(local_dir_path)
+
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)
 
         print(f"Downloading file from s3://{bucket_name}/{prefix} to {local_file_path}")
         client.download_file(bucket_name, prefix, local_file_path)
@@ -151,9 +159,14 @@ class S3:
     @staticmethod
     def download_directory(*, bucket_name: str, prefix: str = None, local_dir_path: str = None) -> None:
         """Download a directory from S3."""
-        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
         if not local_dir_path:
             local_dir_path = os.path.join(os.getcwd(), prefix or "")
+
+        # Ensure local_dir_path is treated as a directory for directory downloads
+        if not local_dir_path.endswith("/"):
+            local_dir_path += "/"
+
+        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
 
         cli_driver = create_clidriver()
         cli_driver.main(["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"])
@@ -172,15 +185,19 @@ class S3:
         paginator = client.get_paginator("list_objects_v2")
         response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
 
-        if not os.path.exists(local_dir_path):
-            os.makedirs(local_dir_path)
+        # Ensure local_dir_path is treated as a directory for directory downloads
+        if not local_dir_path.endswith("/") and local_dir_path != ".":
+            local_dir_path += "/"
+
+        if not os.path.exists(local_dir_path.rstrip("/")):
+            os.makedirs(local_dir_path.rstrip("/"))
 
         print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
         for response in response_iterator:
             if "Contents" in response:
                 for obj in response["Contents"]:
                     file_key = obj["Key"]
-                    local_file_path = os.path.join(local_dir_path, os.path.relpath(file_key, prefix or ""))
+                    local_file_path = os.path.join(local_dir_path.rstrip("/"), os.path.relpath(file_key, prefix or ""))
                     os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
                     client.download_file(bucket_name, file_key, local_file_path)
 

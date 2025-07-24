@@ -1,7 +1,6 @@
-"""Widgets package for S3TUI."""
-
+from .breadcrumb import Breadcrumb
 from .bucket_list import BucketList
 from .object_list import ObjectList
-from .path_bar import PathBar
+from .title_bar import TitleBar
 
-__all__ = ["BucketList", "ObjectList", "PathBar"]
+__all__ = ["Breadcrumb", "BucketList", "ObjectList", "TitleBar"]
