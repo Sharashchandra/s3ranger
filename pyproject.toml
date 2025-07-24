@@ -8,6 +8,7 @@ dependencies = [
     "awscli>=1.41.9",
     "boto3>=1.39.9",
     "textual>=4.0.0",
+    "textual-fspicker>=0.4.1",
 ]
 
 [dependency-groups]
