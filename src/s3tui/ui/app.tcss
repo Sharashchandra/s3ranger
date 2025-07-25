@@ -570,7 +570,7 @@ DownloadModal {
 
 .dialog-actions Button:hover {
     background: #30363d;
-    border: solid #484f58;
+    border: none;
     color: #f0f6fc;
 }
 
@@ -591,4 +591,86 @@ DownloadModal {
     background: #161b22;
     border: solid #21262d;
     color: #484f58;
+}
+
+/* ====================================
+ * UPLOAD MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+UploadModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+/* Main dialog container */
+#upload-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 25;
+    max-height: 50;
+    background: #161b22;
+    border: solid #30363d;
+}
+
+/* Upload loading indicator */
+#upload-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #161b22;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
+/* Dialog header */
+#upload-dialog-header {
+    height: auto;
+    width: 100%;
+    background: #1f2937;
+    border-bottom: solid #30363d;
+    padding: 1;
+}
+
+/* Dialog content */
+#upload-dialog-content {
+    padding: 1 2;
+    height: auto;
+    width: 100%;
+}
+
+#source-input {
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+    width: 1fr;
+}
+
+#source-input:focus {
+    border: solid #58a6ff;
+}
+
+#destination-field {
+    background: #21262d;
+    color: #7d8590;
+    border: solid #30363d;
+    padding: 0 1;
+    height: 3;
+    width: 100%;
+    overflow: scroll;
+    text-overflow: fold;
+}
+
+/* Dialog footer */
+#upload-dialog-footer {
+    height: auto;
+    min-height: 6;
+    width: 100%;
+    background: #1f2937;
+    border-top: solid #30363d;
+    padding: 1;
+    layout: horizontal;
+    content-align: left middle;
 }
