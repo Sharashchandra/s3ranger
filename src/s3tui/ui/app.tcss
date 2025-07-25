@@ -67,6 +67,10 @@ TitleBar {
     margin-right: 1;
 }
 
+#connected-indicator.error {
+    color: #da3633;
+}
+
 #aws-info {
     color: #7d8590;
     width: auto;
