@@ -10,7 +10,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, LoadingIndicator, Static
-from textual_fspicker import SelectDirectory
+from textual_fspicker import FileOpen, SelectDirectory
 
 from s3tui.gateways.s3 import S3
 
@@ -197,7 +197,7 @@ class DownloadModal(ModalScreen[bool]):
     def _on_download_success(self, message: str) -> None:
         """Handle successful download completion."""
         self.is_downloading = False
-        self.notify(message, severity="success")
+        self.notify(message, severity="information")
         self.dismiss(True)
 
     def _on_download_error(self, error: Exception) -> None:
@@ -207,8 +207,17 @@ class DownloadModal(ModalScreen[bool]):
 
     @work
     async def action_file_picker(self) -> None:
-        if path := await self.app.push_screen_wait(SelectDirectory(location=FILE_PICKER_DEFAULT_PATH)):
-            path = f"{path}/"  # Ensure path is a string
+        # Use SelectDirectory for folders, FileOpen for files
+        picker_cls = FileOpen
+        if self.is_folder:
+            picker_cls = SelectDirectory
+        picker = picker_cls(location=FILE_PICKER_DEFAULT_PATH)
+
+        if path := await self.app.push_screen_wait(picker):
+            if path.is_dir():
+                path = f"{path}/"  # Ensure path is a string
+            path = str(path)
+
             destination_input = self.query_one("#destination-input", Input)
             destination_input.value = path
             destination_input.cursor_position = len(path)
