@@ -7,6 +7,7 @@ from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3tui.gateways.s3 import S3
+from s3tui.ui.widgets.title_bar import TitleBar
 
 
 class BucketItem(ListItem):
@@ -83,7 +84,7 @@ class BucketList(Static):
     def _load_buckets_async(self) -> None:
         """Asynchronously load buckets from S3."""
         try:
-            raw_buckets = S3.list_buckets(prefix="d-galesandbox-")  # Hardcoded prefix
+            raw_buckets = S3.list_buckets()
             buckets = self._transform_buckets_data(raw_buckets)
             # Update state on the main thread using call_later
             self.app.call_later(lambda: self._on_buckets_loaded(buckets))
@@ -96,12 +97,28 @@ class BucketList(Static):
         """Handle successful buckets loading."""
         self.buckets = buckets
         self.is_loading = False
+        
+        # Reset connected indicator to normal (green) state
+        try:
+            title_bar = self.screen.query_one(TitleBar)
+            title_bar.connection_error = False
+        except Exception:
+            # Title bar not found or not ready, ignore
+            pass
 
     def _on_buckets_error(self, error: Exception) -> None:
         """Handle buckets loading error."""
         self.notify(f"Error loading buckets: {error}", severity="error")
         self.buckets = []
         self.is_loading = False
+        
+        # Change connected indicator to red to show error state
+        try:
+            title_bar = self.screen.query_one(TitleBar)
+            title_bar.connection_error = True
+        except Exception:
+            # Title bar not found or not ready, ignore
+            pass
 
     def _transform_buckets_data(self, buckets: list[dict]) -> list[dict]:
         """Transform raw bucket data into a more usable format"""

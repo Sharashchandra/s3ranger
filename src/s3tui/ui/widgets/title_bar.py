@@ -1,5 +1,6 @@
 from textual.app import ComposeResult
 from textual.containers import Horizontal
+from textual.reactive import reactive
 from textual.widgets import Static
 
 from s3tui.ui.utils import get_current_aws_profile
@@ -7,6 +8,9 @@ from s3tui.ui.utils import get_current_aws_profile
 
 class TitleBar(Static):
     """Title bar widget matching the HTML design"""
+    
+    # Reactive property to track connection status
+    connection_error: bool = reactive(False)
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="title-bar-container"):
@@ -14,3 +18,15 @@ class TitleBar(Static):
             with Horizontal(id="status-container"):
                 yield Static("●", id="connected-indicator")
                 yield Static(f"aws-profile: {get_current_aws_profile()}", id="aws-info")
+
+    def watch_connection_error(self, connection_error: bool) -> None:
+        """React to connection error state changes."""
+        try:
+            status_indicator = self.query_one("#connected-indicator", Static)
+            if connection_error:
+                status_indicator.add_class("error")
+            else:
+                status_indicator.remove_class("error")
+        except Exception:
+            # Indicator not ready yet, silently ignore
+            pass

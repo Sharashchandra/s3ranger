@@ -18,8 +18,6 @@ class MainScreen(Screen):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("tab", "switch_panel", "Switch Panel"),
-        Binding("enter", "open_item", "Open"),
-        Binding("space", "select_item", "Select"),
         Binding("d", "download", "Download"),
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
@@ -52,16 +50,6 @@ class MainScreen(Screen):
             object_list.focus()
         else:
             bucket_list.focus()
-
-    def action_open_item(self) -> None:
-        """Open the currently focused item"""
-        # This will be handled by the individual widgets
-        pass
-
-    def action_select_item(self) -> None:
-        """Select/multi-select the currently focused item"""
-        # This will be handled by the object list widget
-        pass
 
     def action_download(self) -> None:
         """Download selected items"""
