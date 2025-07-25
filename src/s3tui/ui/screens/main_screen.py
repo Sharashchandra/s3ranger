@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer
 
+from s3tui.ui.modals.delete_modal import DeleteModal
 from s3tui.ui.modals.download_modal import DownloadModal
 from s3tui.ui.modals.upload_modal import UploadModal
 from s3tui.ui.widgets.bucket_list import BucketList
@@ -111,7 +112,27 @@ class MainScreen(Screen):
 
     def action_delete_item(self) -> None:
         """Delete selected items"""
-        self.notify("Delete functionality not yet implemented", severity="error")
+        object_list = self.query_one("#object-list", ObjectList)
+
+        # Get the currently focused object
+        s3_uri = object_list.get_s3_uri_for_focused_object()
+        focused_obj = object_list.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for deletion", severity="error")
+            return
+
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
+
+        # Show the delete modal
+        def on_delete_result(result: bool) -> None:
+            if result:
+                # Delete was successful, refresh the view
+                object_list = self.query_one("#object-list", ObjectList)
+                object_list.refresh_objects()
+
+        self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
 
     def action_refresh(self) -> None:
         """Refresh the current view"""
