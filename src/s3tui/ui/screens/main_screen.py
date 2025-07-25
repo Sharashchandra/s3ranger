@@ -5,6 +5,7 @@ from textual.screen import Screen
 from textual.widgets import Footer
 
 from s3tui.ui.modals.download_modal import DownloadModal
+from s3tui.ui.modals.upload_modal import UploadModal
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
 from s3tui.ui.widgets.title_bar import TitleBar
@@ -80,13 +81,33 @@ class MainScreen(Screen):
         def on_download_result(result: bool) -> None:
             if result:
                 # Download was successful, refresh the view if needed
-                pass
+                object_list = self.query_one("#object-list", ObjectList)
+                object_list.refresh_objects()
 
         self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
     def action_upload(self) -> None:
         """Upload files to current location"""
-        self.notify("Upload functionality not yet implemented", severity="error")
+        object_list = self.query_one("#object-list", ObjectList)
+
+        # Get the current S3 location (bucket + prefix)
+        current_location = object_list.get_current_s3_location()
+        
+        if not current_location:
+            self.notify("No bucket selected for upload", severity="error")
+            return
+
+        # Always upload to current location (bucket root or current prefix)
+        # This ensures we upload to the current directory, not to a focused folder
+        upload_destination = current_location
+
+        # Show the upload modal
+        def on_upload_result(result: bool) -> None:
+            if result:
+                # Upload was successful, refresh the view
+                object_list.refresh_objects()
+
+        self.app.push_screen(UploadModal(upload_destination, False), on_upload_result)
 
     def action_delete_item(self) -> None:
         """Delete selected items"""
