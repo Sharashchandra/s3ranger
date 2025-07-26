@@ -349,6 +349,21 @@ class ObjectList(Static):
 
         return f"s3://{self.current_bucket}/{full_path}"
 
+    def get_current_s3_location(self) -> str | None:
+        """Get the S3 URI for the current location (bucket + prefix)."""
+        if not self.current_bucket:
+            return None
+        
+        # Construct S3 URI for current location
+        if self.current_prefix:
+            return f"s3://{self.current_bucket}/{self.current_prefix}"
+        else:
+            return f"s3://{self.current_bucket}/"
+
+    def refresh_objects(self) -> None:
+        """Refresh the object list for the current bucket."""
+        self._load_bucket_objects()
+
     def focus(self) -> None:
         """Override focus to only focus the table if it's mounted."""
         if self._table_mounted:

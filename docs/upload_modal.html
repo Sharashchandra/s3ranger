@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Destination - Terminal UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border: 1px solid #30363d;
+        }
+
+        /* Header */
+        .header {
+            background: #161b22;
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            color: #58a6ff;
+            font-weight: normal;
+        }
+
+        .status {
+            color: #7d8590;
+            font-size: 12px;
+        }
+
+        .connected {
+            color: #3fb950;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Dialog overlay */
+        .dialog-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        /* Dialog box */
+        .dialog {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Dialog header */
+        .dialog-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #30363d;
+            background: #1f2937;
+        }
+
+        .dialog-title {
+            color: #f0f6fc;
+            font-weight: normal;
+            margin-bottom: 4px;
+        }
+
+        .dialog-subtitle {
+            color: #7d8590;
+            font-size: 11px;
+        }
+
+        /* Dialog content */
+        .dialog-content {
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Field groups */
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-label {
+            color: #f0f6fc;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .field-value {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #c9d1d9;
+        }
+
+        /* Read-only source field */
+        .field-value.readonly {
+            background: #21262d;
+            color: #7d8590;
+            cursor: not-allowed;
+        }
+
+        /* Input field */
+        .field-input {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #c9d1d9;
+            transition: border-color 0.2s ease;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            background: #0d1117;
+        }
+
+        /* Field helper text */
+        .field-help {
+            color: #7d8590;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* Selection info */
+        .selection-info {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 12px;
+            border-radius: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .selection-text {
+            color: #7d8590;
+        }
+
+        .selection-count {
+            color: #58a6ff;
+            font-weight: normal;
+        }
+
+        /* Dialog footer */
+        .dialog-footer {
+            padding: 12px 16px;
+            background: #1f2937;
+            border-top: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dialog-keybindings {
+            display: flex;
+            gap: 12px;
+            color: #7d8590;
+            font-size: 10px;
+        }
+
+        .key {
+            background: #21262d;
+            padding: 2px 4px;
+            border-radius: 2px;
+            color: #f0f6fc;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.1s ease;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #30363d;
+            border-color: #484f58;
+        }
+
+        .btn:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+
+        .btn.primary {
+            background: #3fb950;
+            border-color: #3fb950;
+            color: #000000;
+        }
+
+        .btn.primary:hover {
+            background: #2ea043;
+            border-color: #2ea043;
+        }
+
+        .btn:disabled {
+            background: #161b22;
+            border-color: #21262d;
+            color: #484f58;
+            cursor: not-allowed;
+        }
+
+        /* Background content (dimmed) */
+        .background-content {
+            flex: 1;
+            display: flex;
+            opacity: 0.3;
+        }
+
+        .left-panel {
+            width: 320px;
+            background: #111;
+            border-right: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            background: #161b22;
+            padding: 6px 12px;
+            border-bottom: 1px solid #30363d;
+            color: #f0f6fc;
+        }
+
+        .right-panel {
+            flex: 1;
+            background: #0d1117;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">S3 Browser</div>
+            <div class="status">
+                <span class="connected">●</span> aws-profile: production | us-east-1
+            </div>
+        </div>
+
+        <!-- Background content (dimmed) -->
+        <div class="background-content">
+            <div class="left-panel">
+                <div class="panel-title">Buckets (5)</div>
+            </div>
+            <div class="right-panel">
+            </div>
+        </div>
+
+        <!-- Dialog overlay -->
+        <div class="dialog-overlay">
+            <div class="dialog">
+                <!-- Dialog header -->
+                <div class="dialog-header">
+                    <div class="dialog-title">Download Files</div>
+                    <div class="dialog-subtitle">Specify download destination</div>
+                </div>
+
+                <!-- Dialog content -->
+                <div class="dialog-content">
+
+                    <!-- Source field -->
+                    <div class="field-group">
+                        <label class="field-label">Source</label>
+                        <div class="field-value readonly">~/Desktop/pics/avatars/</div>
+                        <div class="field-help">Files will be uploaded from this local path (~ expands to home directory)</div>
+                    </div>
+
+
+                    <!-- Destination field -->
+                    <div class="field-group">
+                        <label class="field-label">Destination</label>
+                        <input
+                            type="text"
+                            class="field-input"
+                            id="destinationInput"
+                            value="s3://my-app-assets/uploads/images/"
+                            placeholder="Enter s3 destination path..."
+                            autofocus
+                        >
+                        <div class="field-help">S3 path where files will be uploaded</div>
+                    </div>
+                </div>
+
+                <!-- Dialog footer -->
+                <div class="dialog-footer">
+                    <div class="dialog-keybindings">
+                        <span><span class="key">Tab</span> Navigate</span>
+                        <span><span class="key">Ctrl+Enter</span> Upload</span>
+                        <span><span class="key">Esc</span> Cancel</span>
+                        <span><span class="key">Ctrl+o</span> Open File Picker</span>
+                    </div>
+                    <div class="dialog-actions">
+                        <button class="btn" onclick="closeDialog()">Cancel</button>
+                        <button class="btn primary" onclick="startDownload()" id="downloadBtn">Download</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startDownload() {
+            const destination = document.getElementById('destinationInput').value.trim();
+
+            if (!destination) {
+                alert('Please enter a destination path');
+                document.getElementById('destinationInput').focus();
+                return;
+            }
+
+            // In real implementation, this would start the download
+            alert(`Starting download to: ${destination}`);
+            console.log('Download started:', {
+                source: 's3://my-app-assets/uploads/images/',
+                destination: destination,
+                files: 3,
+                size: '7.2 MB'
+            });
+        }
+
+        function closeDialog() {
+            // In real implementation, this would close the dialog
+            alert('Download cancelled');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'Enter':
+                    if (e.target.id !== 'destinationInput') {
+                        e.preventDefault();
+                        startDownload();
+                    }
+                    break;
+
+                case 'Escape':
+                    e.preventDefault();
+                    closeDialog();
+                    break;
+
+                case 'Tab':
+                    // Let default tab behavior work for navigation
+                    break;
+            }
+        });
+
+        // Auto-select input text when focused
+        document.getElementById('destinationInput').addEventListener('focus', (e) => {
+            e.target.select();
+        });
+
+        // Validate input as user types
+        document.getElementById('destinationInput').addEventListener('input', (e) => {
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = !e.target.value.trim();
+        });
+    </script>
+</body>
+</html>

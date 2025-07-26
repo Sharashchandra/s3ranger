@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3TUI - Delete Modal</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .modal-container {
+            max-width: 600px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .modal-header {
+            background: #1f2937;
+            border-bottom: 1px solid #30363d;
+            padding: 16px;
+        }
+        .modal-title {
+            color: #f0f6fc;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+        .modal-subtitle {
+            color: #7d8590;
+            font-size: 14px;
+            margin: 0;
+        }
+        .modal-content {
+            padding: 16px 24px;
+        }
+        .field-group {
+            margin-bottom: 16px;
+        }
+        .field-label {
+            color: #f0f6fc;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .field-value {
+            background: #21262d;
+            color: #7d8590;
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+        .field-help {
+            color: #7d8590;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .modal-footer {
+            background: #1f2937;
+            border-top: 1px solid #30363d;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .keybindings {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .keybinding-row {
+            display: flex;
+            gap: 16px;
+        }
+        .keybinding {
+            color: #7d8590;
+            font-size: 12px;
+        }
+        .keybinding kbd {
+            background: #30363d;
+            color: #f0f6fc;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 80px;
+        }
+        .btn-cancel {
+            background: #48505b;
+            color: #c9d1d9;
+        }
+        .btn-cancel:hover {
+            background: #30363d;
+            color: #f0f6fc;
+        }
+        .btn-delete {
+            background: #da3633;
+            color: #ffffff;
+        }
+        .btn-delete:hover {
+            background: #b92621;
+        }
+    </style>
+</head>
+<body>
+    <h1>S3TUI Delete Modal</h1>
+    
+    <p>The delete modal allows users to permanently delete files or folders from S3. This action cannot be undone.</p>
+    
+    <h2>Modal Design</h2>
+    
+    <div class="modal-container">
+        <div class="modal-header">
+            <div class="modal-title">Delete File</div>
+            <div class="modal-subtitle">This action cannot be undone</div>
+        </div>
+        
+        <div class="modal-content">
+            <div class="field-group">
+                <label class="field-label">Source (S3)</label>
+                <div class="field-value">s3://my-bucket/documents/important-file.pdf</div>
+                <div class="field-help">This file will be permanently deleted from S3</div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <div class="keybindings">
+                <div class="keybinding-row">
+                    <span class="keybinding"><kbd>Tab</kbd> Navigate</span>
+                    <span class="keybinding"><kbd>Ctrl+Enter</kbd> Delete</span>
+                </div>
+                <div class="keybinding-row">
+                    <span class="keybinding"><kbd>Esc</kbd> Cancel</span>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-cancel">Cancel</button>
+                <button class="btn btn-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <h2>For Folders</h2>
+    
+    <div class="modal-container" style="margin-top: 20px;">
+        <div class="modal-header">
+            <div class="modal-title">Delete Folder</div>
+            <div class="modal-subtitle">This action cannot be undone</div>
+        </div>
+        
+        <div class="modal-content">
+            <div class="field-group">
+                <label class="field-label">Source (S3)</label>
+                <div class="field-value">s3://my-bucket/documents/reports/</div>
+                <div class="field-help">This folder and all its contents will be permanently deleted from S3</div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <div class="keybindings">
+                <div class="keybinding-row">
+                    <span class="keybinding"><kbd>Tab</kbd> Navigate</span>
+                    <span class="keybinding"><kbd>Ctrl+Enter</kbd> Delete</span>
+                </div>
+                <div class="keybinding-row">
+                    <span class="keybinding"><kbd>Esc</kbd> Cancel</span>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-cancel">Cancel</button>
+                <button class="btn btn-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <h2>Features</h2>
+    
+    <ul>
+        <li><strong>Confirmation Required:</strong> Shows clear warning that the action cannot be undone</li>
+        <li><strong>File/Folder Support:</strong> Can delete individual files or entire directories</li>
+        <li><strong>S3 Path Display:</strong> Shows the exact S3 path that will be deleted</li>
+        <li><strong>Red Delete Button:</strong> Visually distinct red styling to indicate destructive action</li>
+        <li><strong>Keyboard Shortcuts:</strong> <kbd>Ctrl+Enter</kbd> to delete, <kbd>Esc</kbd> to cancel</li>
+        <li><strong>Loading State:</strong> Shows loading indicator during deletion</li>
+        <li><strong>Error Handling:</strong> Displays helpful error messages if deletion fails</li>
+    </ul>
+    
+    <h2>Usage</h2>
+    
+    <p>To use the delete modal in your code:</p>
+    
+    <pre style="background: #21262d; padding: 16px; border-radius: 6px; color: #c9d1d9; overflow-x: auto;">
+from s3tui.ui.modals import DeleteModal
+
+# For deleting a file
+def delete_file(self, s3_path: str):
+    modal = DeleteModal(s3_path=s3_path, is_folder=False)
+    self.app.push_screen(modal, callback=self.on_delete_complete)
+
+# For deleting a folder
+def delete_folder(self, s3_path: str):
+    modal = DeleteModal(s3_path=s3_path, is_folder=True)
+    self.app.push_screen(modal, callback=self.on_delete_complete)
+
+def on_delete_complete(self, success: bool):
+    if success:
+        # Refresh the file listing
+        self.refresh_objects()
+    </pre>
+</body>
+</html>

@@ -33,6 +33,18 @@ Static {
 }
 
 /* ====================================
+ * MAIN FOOTER
+ * ==================================== */
+#main-footer {
+    dock: bottom;
+    height: auto;
+    background: #0d1117;
+    border-top: solid #30363d;
+    color: #c9d1d9;
+    padding: 0 1;
+}
+
+/* ====================================
  * TITLE BAR WIDGET
  * ==================================== */
 TitleBar {
@@ -67,6 +79,10 @@ TitleBar {
     margin-right: 1;
 }
 
+#connected-indicator.error {
+    color: #da3633;
+}
+
 #aws-info {
     color: #7d8590;
     width: auto;
@@ -92,12 +108,34 @@ BucketList {
 #bucket-panel-title {
     dock: top;
     height: 2;
-    background: #161b22;
+    background: #0d1117;
     border-bottom: solid #30363d;
     color: #f0f6fc;
     content-align: center middle;
     text-style: none;
     padding: 0 1;
+}
+
+#bucket-filter {
+    dock: top;
+    height: 3;
+    margin: 2 0 0 0;
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+}
+
+#bucket-filter:focus {
+    border: solid #58a6ff;
+}
+
+#bucket-help-text {
+    dock: top;
+    height: 1;
+    padding: 0 1;
+    background: #0d1117;
+    color: #7d8590;
+    text-style: none;
 }
 
 #bucket-list-view {
@@ -131,7 +169,7 @@ BucketItem {
 }
 
 BucketItem:hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 BucketItem > * {
@@ -144,7 +182,7 @@ BucketItem:focus,
 BucketItem.-highlight {
     background: #0969da;
     color: #ffffff;
-    border-left: solid #ffffff;
+    border-left: solid #0969da;
 }
 
 BucketItem.-active .bucket-name,
@@ -225,7 +263,7 @@ ObjectList {
 Breadcrumb {
     height: 2;
     padding: 0 1;
-    background: #161b22;
+    background: #0d1117;
     color: #f0f6fc;
     border-bottom: solid #30363d;
     text-style: none;
@@ -240,7 +278,7 @@ Breadcrumb:hover {
     dock: top;
     height: 2;
     min-height: 2;
-    background: #161b22;
+    background: #0d1117;
     border-bottom: solid #30363d;
     padding: 0 1;
     color: #f0f6fc;
@@ -290,7 +328,7 @@ DataTable {
 }
 
 DataTable > .datatable--header {
-    background: #161b22;
+    background: #0d1117;
     color: #7d8590;
     border-bottom: solid #30363d;
     padding: 0 1;
@@ -329,7 +367,7 @@ DataTable > .datatable--even-row {
 }
 
 DataTable > .datatable--hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 /* Remove zebra stripes and focus on clean lines */
@@ -338,7 +376,7 @@ DataTable .datatable--row {
 }
 
 DataTable .datatable--row:hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 DataTable .datatable--row.-cursor {
@@ -364,7 +402,7 @@ DownloadModal {
     height: auto;
     min-height: 25;
     max-height: 50;
-    background: #161b22;
+    background: #0d1117;
     border: solid #30363d;
 }
 
@@ -373,7 +411,7 @@ DownloadModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #161b22;
+    background: #0d1117;
     color: #58a6ff;
     text-style: none;
     display: none;
@@ -570,7 +608,7 @@ DownloadModal {
 
 .dialog-actions Button:hover {
     background: #30363d;
-    border: solid #484f58;
+    border: none;
     color: #f0f6fc;
 }
 
@@ -588,7 +626,168 @@ DownloadModal {
 }
 
 .dialog-actions Button:disabled {
-    background: #161b22;
+    background: #0d1117;
     border: solid #21262d;
     color: #484f58;
+}
+
+/* ====================================
+ * UPLOAD MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+UploadModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+/* Main dialog container */
+#upload-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 25;
+    max-height: 50;
+    background: #0d1117;
+    border: solid #30363d;
+}
+
+/* Upload loading indicator */
+#upload-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #0d1117;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
+/* Dialog header */
+#upload-dialog-header {
+    height: auto;
+    width: 100%;
+    background: #1f2937;
+    border-bottom: solid #30363d;
+    padding: 1;
+}
+
+/* Dialog content */
+#upload-dialog-content {
+    padding: 1 2;
+    height: auto;
+    width: 100%;
+}
+
+#source-input {
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+    width: 1fr;
+}
+
+#source-input:focus {
+    border: solid #58a6ff;
+}
+
+#destination-field {
+    background: #21262d;
+    color: #7d8590;
+    border: solid #30363d;
+    padding: 0 1;
+    height: 3;
+    width: 100%;
+    overflow: scroll;
+    text-overflow: fold;
+}
+
+/* Dialog footer */
+#upload-dialog-footer {
+    height: auto;
+    min-height: 6;
+    width: 100%;
+    background: #1f2937;
+    border-top: solid #30363d;
+    padding: 1;
+    layout: horizontal;
+    content-align: left middle;
+}
+
+/* ====================================
+ * DELETE MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+DeleteModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+/* Main dialog container */
+#delete-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 20;
+    max-height: 40;
+    background: #0d1117;
+    border: solid #30363d;
+}
+
+/* Delete loading indicator */
+#delete-loading {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    background: #0d1117;
+    color: #58a6ff;
+    text-style: none;
+    display: none;
+}
+
+/* Dialog header */
+#delete-dialog-header {
+    height: auto;
+    width: 100%;
+    background: #1f2937;
+    border-bottom: solid #30363d;
+    padding: 1;
+}
+
+/* Dialog content */
+#delete-dialog-content {
+    padding: 1 2;
+    height: auto;
+    width: 100%;
+}
+
+/* Dialog footer */
+#delete-dialog-footer {
+    height: auto;
+    min-height: 6;
+    width: 100%;
+    background: #1f2937;
+    border-top: solid #30363d;
+    padding: 1;
+    layout: horizontal;
+    content-align: left middle;
+}
+
+/* Delete button styling */
+.dialog-actions Button.delete-button {
+    background: #da3633;
+    border: solid #da3633;
+    color: #ffffff;
+}
+
+.dialog-actions Button.delete-button:hover {
+    background: #b92621;
+    border: solid #b92621;
+    color: #ffffff;
+}
+
+.dialog-actions Button.delete-button:focus {
+    background: #b92621;
+    border: solid #b92621;
+    color: #ffffff;
 }
