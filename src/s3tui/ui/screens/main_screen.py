@@ -2,7 +2,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Footer
+from textual.widgets import DataTable, Footer, ListView
 
 from s3tui.ui.modals.delete_modal import DeleteModal
 from s3tui.ui.modals.download_modal import DownloadModal
@@ -22,6 +22,7 @@ class MainScreen(Screen):
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
         Binding("r", "refresh", "Refresh"),
+        Binding("h", "help", "Help", show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -32,8 +33,18 @@ class MainScreen(Screen):
                 yield BucketList(id="bucket-list")
                 yield ObjectList(id="object-list")
 
-            # Footer with key bindings
-            yield Footer()
+            # Footer with key bindings - now integrated as part of main container
+            yield Footer(id="main-footer", show_command_palette=False)
+
+    def on_mount(self) -> None:
+        """Called when the screen is mounted. Set initial focus."""
+        # Set initial focus to bucket list
+        bucket_list = self.query_one("#bucket-list", BucketList)
+        try:
+            bucket_list_view = bucket_list.query_one("#bucket-list-view", ListView)
+            bucket_list_view.focus()
+        except Exception:
+            bucket_list.focus()
 
     def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
         """Handle bucket selection from BucketList widget"""
@@ -45,11 +56,22 @@ class MainScreen(Screen):
         bucket_list = self.query_one("#bucket-list", BucketList)
         object_list = self.query_one("#object-list", ObjectList)
 
-        # Toggle focus between panels
-        if bucket_list.has_focus:
-            object_list.focus()
-        else:
-            bucket_list.focus()
+        # Try to find the focusable components within each widget
+        try:
+            bucket_list_view = bucket_list.query_one("#bucket-list-view", ListView)
+            object_table = object_list.query_one("#object-table", DataTable)
+
+            # Check which component currently has focus
+            if bucket_list_view.has_focus:
+                object_table.focus()
+            else:
+                bucket_list_view.focus()
+        except Exception:
+            # Fallback to widget-level focus if components not found
+            if bucket_list.has_focus:
+                object_list.focus()
+            else:
+                bucket_list.focus()
 
     def action_download(self) -> None:
         """Download selected items"""
@@ -81,7 +103,7 @@ class MainScreen(Screen):
 
         # Get the current S3 location (bucket + prefix)
         current_location = object_list.get_current_s3_location()
-        
+
         if not current_location:
             self.notify("No bucket selected for upload", severity="error")
             return
@@ -126,4 +148,11 @@ class MainScreen(Screen):
         """Refresh the current view"""
         bucket_list = self.query_one("#bucket-list", BucketList)
         bucket_list.load_buckets()
-        self.notify("Refreshed bucket list")
+
+    def action_help(self) -> None:
+        """Show help information"""
+        # This could be a modal or a simple notification
+        self.notify(
+            "Help: Use 'q' to quit, 'd' to download, 'u' to upload, 'delete' to delete items, 'r' to refresh.",
+            severity="info",
+        )
