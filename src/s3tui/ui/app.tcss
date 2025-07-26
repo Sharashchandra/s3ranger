@@ -33,6 +33,18 @@ Static {
 }
 
 /* ====================================
+ * MAIN FOOTER
+ * ==================================== */
+#main-footer {
+    dock: bottom;
+    height: auto;
+    background: #0d1117;
+    border-top: solid #30363d;
+    color: #c9d1d9;
+    padding: 0 1;
+}
+
+/* ====================================
  * TITLE BAR WIDGET
  * ==================================== */
 TitleBar {
@@ -96,7 +108,7 @@ BucketList {
 #bucket-panel-title {
     dock: top;
     height: 2;
-    background: #161b22;
+    background: #0d1117;
     border-bottom: solid #30363d;
     color: #f0f6fc;
     content-align: center middle;
@@ -135,7 +147,7 @@ BucketItem {
 }
 
 BucketItem:hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 BucketItem > * {
@@ -148,7 +160,7 @@ BucketItem:focus,
 BucketItem.-highlight {
     background: #0969da;
     color: #ffffff;
-    border-left: solid #ffffff;
+    border-left: solid #0969da;
 }
 
 BucketItem.-active .bucket-name,
@@ -229,7 +241,7 @@ ObjectList {
 Breadcrumb {
     height: 2;
     padding: 0 1;
-    background: #161b22;
+    background: #0d1117;
     color: #f0f6fc;
     border-bottom: solid #30363d;
     text-style: none;
@@ -244,7 +256,7 @@ Breadcrumb:hover {
     dock: top;
     height: 2;
     min-height: 2;
-    background: #161b22;
+    background: #0d1117;
     border-bottom: solid #30363d;
     padding: 0 1;
     color: #f0f6fc;
@@ -294,7 +306,7 @@ DataTable {
 }
 
 DataTable > .datatable--header {
-    background: #161b22;
+    background: #0d1117;
     color: #7d8590;
     border-bottom: solid #30363d;
     padding: 0 1;
@@ -333,7 +345,7 @@ DataTable > .datatable--even-row {
 }
 
 DataTable > .datatable--hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 /* Remove zebra stripes and focus on clean lines */
@@ -342,7 +354,7 @@ DataTable .datatable--row {
 }
 
 DataTable .datatable--row:hover {
-    background: #161b22;
+    background: #0d1117;
 }
 
 DataTable .datatable--row.-cursor {
@@ -368,7 +380,7 @@ DownloadModal {
     height: auto;
     min-height: 25;
     max-height: 50;
-    background: #161b22;
+    background: #0d1117;
     border: solid #30363d;
 }
 
@@ -377,7 +389,7 @@ DownloadModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #161b22;
+    background: #0d1117;
     color: #58a6ff;
     text-style: none;
     display: none;
@@ -592,7 +604,7 @@ DownloadModal {
 }
 
 .dialog-actions Button:disabled {
-    background: #161b22;
+    background: #0d1117;
     border: solid #21262d;
     color: #484f58;
 }
@@ -614,7 +626,7 @@ UploadModal {
     height: auto;
     min-height: 25;
     max-height: 50;
-    background: #161b22;
+    background: #0d1117;
     border: solid #30363d;
 }
 
@@ -623,7 +635,7 @@ UploadModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #161b22;
+    background: #0d1117;
     color: #58a6ff;
     text-style: none;
     display: none;
@@ -696,7 +708,7 @@ DeleteModal {
     height: auto;
     min-height: 20;
     max-height: 40;
-    background: #161b22;
+    background: #0d1117;
     border: solid #30363d;
 }
 
@@ -705,7 +717,7 @@ DeleteModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #161b22;
+    background: #0d1117;
     color: #58a6ff;
     text-style: none;
     display: none;
