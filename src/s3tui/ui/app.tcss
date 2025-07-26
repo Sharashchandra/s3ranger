@@ -116,6 +116,28 @@ BucketList {
     padding: 0 1;
 }
 
+#bucket-filter {
+    dock: top;
+    height: 3;
+    margin: 2 0 0 0;
+    background: #0d1117;
+    border: solid #30363d;
+    color: #c9d1d9;
+}
+
+#bucket-filter:focus {
+    border: solid #58a6ff;
+}
+
+#bucket-help-text {
+    dock: top;
+    height: 1;
+    padding: 0 1;
+    background: #0d1117;
+    color: #7d8590;
+    text-style: none;
+}
+
 #bucket-list-view {
     background: #0d1117;
     scrollbar-background: #0d1117;

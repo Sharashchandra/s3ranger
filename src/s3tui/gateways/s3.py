@@ -49,10 +49,15 @@ class S3:
 
     @get_client
     @staticmethod
-    def list_buckets(client: boto3.client, *, prefix: str = None, limit: int = 100) -> list[dict]:
+    def list_buckets(client: boto3.client, *, prefix: str = None) -> list[dict]:
         """List all S3 buckets."""
         print(f"Listing S3 buckets with prefix '{prefix or ''}'")
-        response = client.list_buckets(MaxBuckets=limit, Prefix=prefix or "")
+        paginator = client.get_paginator("list_buckets")
+        response_iterator = paginator.paginate(Prefix=prefix or "")
+
+        buckets = []
+        for response in response_iterator:
+            buckets.extend(response.get("Buckets", []))
 
         return response.get("Buckets", [])
 
