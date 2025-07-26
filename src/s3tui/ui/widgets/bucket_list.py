@@ -1,10 +1,12 @@
 import threading
 
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Vertical
+from textual.events import Key
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
+from textual.widgets import Input, Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3tui.gateways.s3 import S3
 from s3tui.ui.widgets.title_bar import TitleBar
@@ -28,11 +30,17 @@ class BucketItem(ListItem):
 
 
 class BucketList(Static):
-    """Left panel widget displaying S3 buckets"""
+    """Left panel widget displaying S3 buckets with filtering capability"""
 
+    BINDINGS = [Binding("ctrl+f", "focus_filter", "Filter")]
+
+    # Reactive properties
     buckets: list[dict] = reactive([])
-    selected_bucket = reactive(0)
+    filter_text: str = reactive("")
     is_loading: bool = reactive(False)
+
+    # Internal state
+    _prevent_next_selection: bool = False
 
     class BucketSelected(Message):
         """Message sent when a bucket is selected"""
@@ -44,129 +52,205 @@ class BucketList(Static):
     def compose(self) -> ComposeResult:
         with Vertical(id="bucket-list-container"):
             yield Static("Buckets", id="bucket-panel-title")
+            yield Input(placeholder="Filter buckets...", id="bucket-filter")
             yield LoadingIndicator(id="bucket-loading")
             yield ListView(id="bucket-list-view")
 
     def on_mount(self) -> None:
-        """Called when the widget is mounted"""
-        # Load buckets after UI is ready
+        """Initialize the widget after mounting"""
         self.call_later(self.load_buckets)
 
+    # Event handlers
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle filter input changes"""
+        if event.input.id == "bucket-filter":
+            self.filter_text = event.value
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle bucket selection"""
+        if self._prevent_next_selection:
+            self._prevent_next_selection = False
+            return
+
+        if isinstance(event.item, BucketItem):
+            self.post_message(self.BucketSelected(event.item.bucket_name))
+
+    def on_key(self, event: Key) -> None:
+        """Handle keyboard shortcuts"""
+        if event.key == "escape" and self.filter_text:
+            self.clear_filter()
+            event.prevent_default()
+        elif event.key == "ctrl+f":
+            self.focus_filter()
+            event.prevent_default()
+        elif event.key == "enter":
+            filter_input = self.query_one("#bucket-filter", Input)
+            if filter_input.has_focus:
+                self._move_to_first_item()
+                event.prevent_default()
+
+    # Reactive watchers
     def watch_buckets(self, buckets: list[dict]) -> None:
-        """Called when buckets reactive property changes"""
-        self._update_bucket_list()
+        """React to buckets data changes"""
+        self._update_list_display()
+
+    def watch_filter_text(self, filter_text: str) -> None:
+        """React to filter text changes"""
+        self._update_list_display()
 
     def watch_is_loading(self, is_loading: bool) -> None:
-        """React to loading state changes."""
-        try:
-            loading_indicator = self.query_one("#bucket-loading", LoadingIndicator)
-            list_view = self.query_one("#bucket-list-view", ListView)
+        """React to loading state changes"""
+        self._update_loading_state(is_loading)
 
-            if is_loading:
-                loading_indicator.display = True
-                list_view.display = False
-            else:
-                loading_indicator.display = False
-                list_view.display = True
-        except Exception:
-            # Widgets not ready yet, silently ignore
-            pass
-
+    # Public methods
     def load_buckets(self) -> None:
-        """Load buckets from S3 with loading indicator."""
-        # Start loading
+        """Load buckets from S3 asynchronously"""
         self.is_loading = True
-
-        # Use threading to load buckets asynchronously
-        thread = threading.Thread(target=self._load_buckets_async, daemon=True)
+        thread = threading.Thread(target=self._fetch_buckets, daemon=True)
         thread.start()
 
-    def _load_buckets_async(self) -> None:
-        """Asynchronously load buckets from S3."""
+    def clear_filter(self) -> None:
+        """Clear the current filter"""
         try:
-            raw_buckets = S3.list_buckets()
-            buckets = self._transform_buckets_data(raw_buckets)
-            # Update state on the main thread using call_later
-            self.app.call_later(lambda: self._on_buckets_loaded(buckets))
-        except Exception as e:
-            # Handle S3 errors gracefully - capture exception in closure
-            error = e
-            self.app.call_later(lambda: self._on_buckets_error(error))
-
-    def _on_buckets_loaded(self, buckets: list[dict]) -> None:
-        """Handle successful buckets loading."""
-        self.buckets = buckets
-        self.is_loading = False
-        
-        # Reset connected indicator to normal (green) state
-        try:
-            title_bar = self.screen.query_one(TitleBar)
-            title_bar.connection_error = False
+            filter_input = self.query_one("#bucket-filter", Input)
+            filter_input.value = ""
+            self.filter_text = ""
         except Exception:
-            # Title bar not found or not ready, ignore
             pass
 
+    def focus_filter(self) -> None:
+        """Focus the filter input"""
+        try:
+            filter_input = self.query_one("#bucket-filter", Input)
+            filter_input.focus()
+        except Exception:
+            pass
+
+    # Private methods
+    def _fetch_buckets(self) -> None:
+        """Fetch buckets from S3 in background thread"""
+        try:
+            raw_buckets = S3.list_buckets()
+            buckets = self._transform_bucket_data(raw_buckets)
+            self.app.call_later(lambda: self._on_buckets_loaded(buckets))
+        except Exception as error:
+            # Capture exception in closure for thread safety
+            captured_error = error
+            self.app.call_later(lambda: self._on_buckets_error(captured_error))
+
+    def _on_buckets_loaded(self, buckets: list[dict]) -> None:
+        """Handle successful bucket loading"""
+        self.buckets = buckets
+        self.is_loading = False
+        self._update_connection_status(error=False)
+
     def _on_buckets_error(self, error: Exception) -> None:
-        """Handle buckets loading error."""
+        """Handle bucket loading error"""
         self.notify(f"Error loading buckets: {error}", severity="error")
         self.buckets = []
         self.is_loading = False
-        
-        # Change connected indicator to red to show error state
-        try:
-            title_bar = self.screen.query_one(TitleBar)
-            title_bar.connection_error = True
-        except Exception:
-            # Title bar not found or not ready, ignore
-            pass
+        self._update_connection_status(error=True)
 
-    def _transform_buckets_data(self, buckets: list[dict]) -> list[dict]:
-        """Transform raw bucket data into a more usable format"""
+    def _transform_bucket_data(self, raw_buckets: list[dict]) -> list[dict]:
+        """Transform raw S3 bucket data"""
         return [
             {
                 "name": bucket["Name"],
                 "creation_date": bucket["CreationDate"].strftime("%Y-%m-%d"),
-                "region": bucket.get("BucketRegion", "Unknown"),  # Default to us-east-1 if not specified
+                "region": bucket.get("BucketRegion", "Unknown"),
             }
-            for bucket in buckets
+            for bucket in raw_buckets
         ]
 
-    def _update_bucket_list(self) -> None:
-        """Update the bucket list UI (called from main thread)"""
-        # Update title
-        title = self.query_one("#bucket-panel-title", Static)
-        title.update(f"Buckets ({len(self.buckets)})")
+    def _get_filtered_buckets(self) -> list[dict]:
+        """Get buckets filtered by current filter text"""
+        if not self.filter_text:
+            return self.buckets
 
-        # Clear and repopulate ListView
-        list_view = self.query_one("#bucket-list-view", ListView)
-        list_view.clear()
+        filter_lower = self.filter_text.lower()
+        return [bucket for bucket in self.buckets if filter_lower in bucket["name"].lower()]
 
-        for bucket in self.buckets:
-            bucket_item = BucketItem(bucket["name"], bucket["region"])
-            list_view.append(bucket_item)
+    def _update_list_display(self) -> None:
+        """Update the bucket list display"""
+        filtered_buckets = self._get_filtered_buckets()
+        self._update_title(len(filtered_buckets), len(self.buckets))
+        self._populate_list_view(filtered_buckets)
+        self._focus_first_item_if_needed()
 
-        # Focus the first item after populating the list
-        self._focus_first_item()
+    def _update_title(self, filtered_count: int, total_count: int) -> None:
+        """Update the panel title with bucket counts"""
+        try:
+            title = self.query_one("#bucket-panel-title", Static)
+            if self.filter_text:
+                title.update(f"Buckets ({filtered_count}/{total_count})")
+            else:
+                title.update(f"Buckets ({total_count})")
+        except Exception:
+            pass
+
+    def _populate_list_view(self, buckets: list[dict]) -> None:
+        """Populate the ListView with bucket items"""
+        try:
+            list_view = self.query_one("#bucket-list-view", ListView)
+            list_view.clear()
+            for bucket in buckets:
+                bucket_item = BucketItem(bucket["name"], bucket["region"])
+                list_view.append(bucket_item)
+        except Exception:
+            pass
+
+    def _focus_first_item_if_needed(self) -> None:
+        """Focus first item only if filter input doesn't have focus"""
+        try:
+            filter_input = self.query_one("#bucket-filter", Input)
+            if not filter_input.has_focus:
+                self._focus_first_item()
+        except Exception:
+            pass
 
     def _focus_first_item(self) -> None:
-        """Focus on the first item in the bucket list."""
+        """Focus the first item in the list"""
         try:
             list_view = self.query_one("#bucket-list-view", ListView)
             if len(list_view.children) > 0:
                 list_view.focus()
                 list_view.index = 0
         except Exception:
-            # List view not ready yet, ignore
             pass
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Handle bucket selection from ListView"""
-        if isinstance(event.item, BucketItem):
-            # Update the selected bucket index
-            bucket_items = list(self.query(BucketItem))
-            try:
-                self.selected_bucket = bucket_items.index(event.item)
-                # Post message to parent screen
-                self.post_message(self.BucketSelected(event.item.bucket_name))
-            except ValueError:
-                pass
+    def _move_to_first_item(self) -> None:
+        """Move focus to first filtered item without selecting"""
+        try:
+            list_view = self.query_one("#bucket-list-view", ListView)
+            if len(list_view.children) > 0:
+                self._prevent_next_selection = True
+                list_view.focus()
+                list_view.index = 0
+        except Exception:
+            pass
+
+    def _update_loading_state(self, is_loading: bool) -> None:
+        """Update UI elements based on loading state"""
+        try:
+            loading_indicator = self.query_one("#bucket-loading", LoadingIndicator)
+            list_view = self.query_one("#bucket-list-view", ListView)
+            filter_input = self.query_one("#bucket-filter", Input)
+
+            if is_loading:
+                loading_indicator.display = True
+                list_view.display = False
+                filter_input.disabled = True
+            else:
+                loading_indicator.display = False
+                list_view.display = True
+                filter_input.disabled = False
+        except Exception:
+            pass
+
+    def _update_connection_status(self, error: bool) -> None:
+        """Update the connection status in title bar"""
+        try:
+            title_bar = self.screen.query_one(TitleBar)
+            title_bar.connection_error = error
+        except Exception:
+            pass
