@@ -8,6 +8,46 @@ from awscli.clidriver import create_clidriver
 
 
 class S3:
+    # Class-level variables to store the endpoint URL and region
+    _endpoint_url = None
+    _region_name = None
+
+    @classmethod
+    def set_endpoint_url(cls, endpoint_url: str = None) -> None:
+        """Set the S3 endpoint URL for all S3 operations.
+
+        Args:
+            endpoint_url: The S3 endpoint URL. Set to None to use default AWS S3.
+        """
+        cls._endpoint_url = endpoint_url
+
+    @classmethod
+    def get_endpoint_url(cls) -> str | None:
+        """Get the current S3 endpoint URL.
+
+        Returns:
+            The S3 endpoint URL or None if using default AWS S3.
+        """
+        return cls._endpoint_url
+
+    @classmethod
+    def set_region_name(cls, region_name: str = None) -> None:
+        """Set the AWS region name for all S3 operations.
+
+        Args:
+            region_name: The AWS region name. Set to None to use default.
+        """
+        cls._region_name = region_name
+
+    @classmethod
+    def get_region_name(cls) -> str | None:
+        """Get the current AWS region name.
+
+        Returns:
+            The AWS region name or None if using default.
+        """
+        return cls._region_name
+
     @staticmethod
     def resolve_s3_location(s3_path):
         """Resolve S3 path to bucket and file_key.
@@ -28,7 +68,12 @@ class S3:
         def wrapper(*args, **kwargs):
             if not kwargs.get("client"):
                 # Create a new S3 client if not provided
-                kwargs["client"] = boto3.client("s3")
+                client_kwargs = {"service_name": "s3"}
+                if S3._endpoint_url:
+                    client_kwargs["endpoint_url"] = S3._endpoint_url
+                if S3._region_name:
+                    client_kwargs["region_name"] = S3._region_name
+                kwargs["client"] = boto3.client(**client_kwargs)
             return func(*args, **kwargs)
 
         return wrapper
@@ -108,7 +153,12 @@ class S3:
         folder_name = os.path.basename(local_dir_path)
 
         cli_driver = create_clidriver()
-        cli_driver.main(["s3", "cp", local_dir_path, f"s3://{bucket_name}/{prefix or ''}{folder_name}", "--recursive"])
+        args = ["s3", "cp", local_dir_path, f"s3://{bucket_name}/{prefix or ''}{folder_name}", "--recursive"]
+        if S3._endpoint_url:
+            args.extend(["--endpoint-url", S3._endpoint_url])
+        if S3._region_name:
+            args.extend(["--region", S3._region_name])
+        cli_driver.main(args)
 
     @get_client
     @resolve_s3_uri
@@ -174,7 +224,12 @@ class S3:
         print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
 
         cli_driver = create_clidriver()
-        cli_driver.main(["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"])
+        args = ["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"]
+        if S3._endpoint_url:
+            args.extend(["--endpoint-url", S3._endpoint_url])
+        if S3._region_name:
+            args.extend(["--region", S3._region_name])
+        cli_driver.main(args)
 
     @get_client
     @resolve_s3_uri
@@ -226,7 +281,12 @@ class S3:
         """Delete a directory from S3."""
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
         cli_driver = create_clidriver()
-        cli_driver.main(["s3", "rm", f"s3://{bucket_name}/{prefix or ''}", "--recursive"])
+        args = ["s3", "rm", f"s3://{bucket_name}/{prefix or ''}", "--recursive"]
+        if S3._endpoint_url:
+            args.extend(["--endpoint-url", S3._endpoint_url])
+        if S3._region_name:
+            args.extend(["--region", S3._region_name])
+        cli_driver.main(args)
 
     @get_client
     @resolve_s3_uri
