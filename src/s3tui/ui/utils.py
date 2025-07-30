@@ -121,6 +121,15 @@ def get_current_aws_profile() -> str:
         The name of the current AWS profile
     """
     try:
+        # Import here to avoid circular import
+        from s3tui.gateways.s3 import S3
+
+        # If a profile was set via CLI, use that
+        cli_profile = S3.get_profile_name()
+        if cli_profile:
+            return cli_profile
+
+        # Otherwise, get the current session profile
         session = boto3.session.Session()
         profiles = session.available_profiles
         if profiles:

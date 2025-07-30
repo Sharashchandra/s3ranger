@@ -8,9 +8,13 @@ from awscli.clidriver import create_clidriver
 
 
 class S3:
-    # Class-level variables to store the endpoint URL and region
+    # Class-level variables to store the endpoint URL, region, profile, and credentials
     _endpoint_url = None
     _region_name = None
+    _profile_name = None
+    _aws_access_key_id = None
+    _aws_secret_access_key = None
+    _aws_session_token = None
 
     @classmethod
     def set_endpoint_url(cls, endpoint_url: str = None) -> None:
@@ -22,15 +26,6 @@ class S3:
         cls._endpoint_url = endpoint_url
 
     @classmethod
-    def get_endpoint_url(cls) -> str | None:
-        """Get the current S3 endpoint URL.
-
-        Returns:
-            The S3 endpoint URL or None if using default AWS S3.
-        """
-        return cls._endpoint_url
-
-    @classmethod
     def set_region_name(cls, region_name: str = None) -> None:
         """Set the AWS region name for all S3 operations.
 
@@ -40,13 +35,37 @@ class S3:
         cls._region_name = region_name
 
     @classmethod
-    def get_region_name(cls) -> str | None:
-        """Get the current AWS region name.
+    def set_profile_name(cls, profile_name: str = None) -> None:
+        """Set the AWS profile name for all S3 operations.
+
+        Args:
+            profile_name: The AWS profile name. Set to None to use default.
+        """
+        cls._profile_name = profile_name
+
+    @classmethod
+    def get_profile_name(cls) -> str | None:
+        """Get the current AWS profile name.
 
         Returns:
-            The AWS region name or None if using default.
+            The AWS profile name or None if using default.
         """
-        return cls._region_name
+        return cls._profile_name
+
+    @classmethod
+    def set_credentials(
+        cls, aws_access_key_id: str = None, aws_secret_access_key: str = None, aws_session_token: str = None
+    ) -> None:
+        """Set the AWS credentials for all S3 operations.
+
+        Args:
+            aws_access_key_id: The AWS access key ID.
+            aws_secret_access_key: The AWS secret access key.
+            aws_session_token: The AWS session token (optional, for temporary credentials).
+        """
+        cls._aws_access_key_id = aws_access_key_id
+        cls._aws_secret_access_key = aws_secret_access_key
+        cls._aws_session_token = aws_session_token
 
     @staticmethod
     def resolve_s3_location(s3_path):
@@ -73,7 +92,31 @@ class S3:
                     client_kwargs["endpoint_url"] = S3._endpoint_url
                 if S3._region_name:
                     client_kwargs["region_name"] = S3._region_name
-                kwargs["client"] = boto3.client(**client_kwargs)
+
+                # Create session with credentials following boto3 precedence order:
+                # 1. Explicit credentials (highest priority)
+                # 2. Profile name
+                # 3. Environment variables (handled automatically by boto3)
+                # 4. Shared credential files (handled automatically by boto3)
+
+                session_kwargs = {}
+
+                # Check if explicit credentials are provided (highest priority)
+                if S3._aws_access_key_id and S3._aws_secret_access_key:
+                    session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
+                    session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
+                    if S3._aws_session_token:
+                        session_kwargs["aws_session_token"] = S3._aws_session_token
+                # Otherwise, use profile if specified
+                elif S3._profile_name:
+                    session_kwargs["profile_name"] = S3._profile_name
+
+                # If region is specified, add it to session (this can also be set via environment/config)
+                if S3._region_name:
+                    session_kwargs["region_name"] = S3._region_name
+
+                session = boto3.Session(**session_kwargs)
+                kwargs["client"] = session.client(**client_kwargs)
             return func(*args, **kwargs)
 
         return wrapper
@@ -158,6 +201,8 @@ class S3:
             args.extend(["--endpoint-url", S3._endpoint_url])
         if S3._region_name:
             args.extend(["--region", S3._region_name])
+        if S3._profile_name:
+            args.extend(["--profile", S3._profile_name])
         cli_driver.main(args)
 
     @get_client
@@ -229,6 +274,8 @@ class S3:
             args.extend(["--endpoint-url", S3._endpoint_url])
         if S3._region_name:
             args.extend(["--region", S3._region_name])
+        if S3._profile_name:
+            args.extend(["--profile", S3._profile_name])
         cli_driver.main(args)
 
     @get_client
@@ -286,6 +333,8 @@ class S3:
             args.extend(["--endpoint-url", S3._endpoint_url])
         if S3._region_name:
             args.extend(["--region", S3._region_name])
+        if S3._profile_name:
+            args.extend(["--profile", S3._profile_name])
         cli_driver.main(args)
 
     @get_client
