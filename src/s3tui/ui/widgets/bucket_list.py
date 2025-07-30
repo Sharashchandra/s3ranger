@@ -41,6 +41,7 @@ class BucketList(Static):
 
     # Internal state
     _prevent_next_selection: bool = False
+    _on_load_complete_callback: callable = None
 
     class BucketSelected(Message):
         """Message sent when a bucket is selected"""
@@ -103,8 +104,13 @@ class BucketList(Static):
         self._update_loading_state(is_loading)
 
     # Public methods
-    def load_buckets(self) -> None:
-        """Load buckets from S3 asynchronously"""
+    def load_buckets(self, on_complete: callable = None) -> None:
+        """Load buckets from S3 asynchronously
+
+        Args:
+            on_complete: Optional callback to call when loading is complete
+        """
+        self._on_load_complete_callback = on_complete
         self.is_loading = True
         thread = threading.Thread(target=self._fetch_buckets, daemon=True)
         thread.start()
@@ -126,6 +132,16 @@ class BucketList(Static):
         except Exception:
             pass
 
+    def focus_list_view(self) -> None:
+        """Focus the bucket list view and select first item"""
+        try:
+            list_view = self.query_one("#bucket-list-view", ListView)
+            if len(list_view.children) > 0:
+                list_view.focus()
+                list_view.index = 0
+        except Exception:
+            pass
+
     # Private methods
     def _fetch_buckets(self) -> None:
         """Fetch buckets from S3 in background thread"""
@@ -144,12 +160,24 @@ class BucketList(Static):
         self.is_loading = False
         self._update_connection_status(error=False)
 
+        # Call the completion callback if one was provided
+        if self._on_load_complete_callback:
+            callback = self._on_load_complete_callback
+            self._on_load_complete_callback = None  # Clear the callback
+            callback()
+
     def _on_buckets_error(self, error: Exception) -> None:
         """Handle bucket loading error"""
         self.notify(f"Error loading buckets: {error}", severity="error")
         self.buckets = []
         self.is_loading = False
         self._update_connection_status(error=True)
+
+        # Call the completion callback even on error
+        if self._on_load_complete_callback:
+            callback = self._on_load_complete_callback
+            self._on_load_complete_callback = None  # Clear the callback
+            callback()
 
     def _transform_bucket_data(self, raw_buckets: list[dict]) -> list[dict]:
         """Transform raw S3 bucket data"""
@@ -203,6 +231,8 @@ class BucketList(Static):
         """Focus first item only if filter input doesn't have focus"""
         try:
             filter_input = self.query_one("#bucket-filter", Input)
+
+            # If the filter input doesn't have focus, ensure the list view gets proper focus
             if not filter_input.has_focus:
                 self._focus_first_item()
         except Exception:
@@ -213,7 +243,9 @@ class BucketList(Static):
         try:
             list_view = self.query_one("#bucket-list-view", ListView)
             if len(list_view.children) > 0:
+                # First, focus the list view itself
                 list_view.focus()
+                # Then set the index to ensure proper navigation
                 list_view.index = 0
         except Exception:
             pass
