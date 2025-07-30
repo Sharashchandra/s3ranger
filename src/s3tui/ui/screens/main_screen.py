@@ -146,8 +146,67 @@ class MainScreen(Screen):
 
     def action_refresh(self) -> None:
         """Refresh the current view"""
+        # Remember which component currently has focus
         bucket_list = self.query_one("#bucket-list", BucketList)
-        bucket_list.load_buckets()
+        object_list = self.query_one("#object-list", ObjectList)
+
+        focused_widget = None
+        try:
+            bucket_list_view = bucket_list.query_one("#bucket-list-view", ListView)
+            object_table = object_list.query_one("#object-table", DataTable)
+
+            if bucket_list_view.has_focus:
+                focused_widget = "bucket_list"
+            elif object_table.has_focus:
+                focused_widget = "object_list"
+        except Exception:
+            # Fallback to widget-level focus check
+            if bucket_list.has_focus:
+                focused_widget = "bucket_list"
+            elif object_list.has_focus:
+                focused_widget = "object_list"
+
+        # Define callback to restore focus when refresh is complete
+        def on_refresh_complete():
+            if focused_widget:
+                self._restore_focus_after_refresh(focused_widget)
+            else:
+                # If no specific focus was detected, default to bucket list
+                self._restore_focus_after_refresh("bucket_list")
+
+        # Refresh the appropriate widget based on focus
+        if focused_widget == "object_list":
+            # Refresh the object list
+            object_list.refresh_objects(on_complete=on_refresh_complete)
+        else:
+            # Default to refreshing bucket list
+            bucket_list.load_buckets(on_complete=on_refresh_complete)
+
+    def _restore_focus_after_refresh(self, focused_widget: str) -> None:
+        """Restore focus to the appropriate widget after refresh"""
+        # Add a small delay to ensure the UI has fully updated
+        self.call_later(lambda: self._do_focus_restore(focused_widget))
+
+    def _do_focus_restore(self, focused_widget: str) -> None:
+        """Actually perform the focus restoration"""
+        try:
+            bucket_list = self.query_one("#bucket-list", BucketList)
+            object_list = self.query_one("#object-list", ObjectList)
+
+            if focused_widget == "bucket_list":
+                # Use the dedicated method to restore focus to bucket list
+                bucket_list.focus_list_view()
+            elif focused_widget == "object_list":
+                # Use the dedicated method to restore focus to object table
+                object_list.focus_table()
+        except Exception:
+            # Fallback to widget-level focus
+            if focused_widget == "bucket_list":
+                bucket_list = self.query_one("#bucket-list", BucketList)
+                bucket_list.focus()
+            elif focused_widget == "object_list":
+                object_list = self.query_one("#object-list", ObjectList)
+                object_list.focus()
 
     def action_help(self) -> None:
         """Show help information"""

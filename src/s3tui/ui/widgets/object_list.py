@@ -31,6 +31,7 @@ class ObjectList(Static):
     # Private cache for all bucket objects
     _all_objects: list[dict] = []
     _table_mounted: bool = False
+    _on_load_complete_callback: callable = None
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -161,12 +162,24 @@ class ObjectList(Static):
         self._filter_objects_by_prefix()
         self.is_loading = False
 
+        # Call the completion callback if one was provided
+        if self._on_load_complete_callback:
+            callback = self._on_load_complete_callback
+            self._on_load_complete_callback = None  # Clear the callback
+            callback()
+
     def _on_objects_error(self, error: Exception) -> None:
         """Handle objects loading error."""
         self._clear_objects()
         self.is_loading = False
         # Optionally show an error message
         self.notify(f"Error loading bucket objects: {error}", severity="error")
+
+        # Call the completion callback even on error
+        if self._on_load_complete_callback:
+            callback = self._on_load_complete_callback
+            self._on_load_complete_callback = None  # Clear the callback
+            callback()
 
     def _clear_objects(self) -> None:
         """Clear all object data."""
@@ -353,19 +366,37 @@ class ObjectList(Static):
         """Get the S3 URI for the current location (bucket + prefix)."""
         if not self.current_bucket:
             return None
-        
+
         # Construct S3 URI for current location
         if self.current_prefix:
             return f"s3://{self.current_bucket}/{self.current_prefix}"
         else:
             return f"s3://{self.current_bucket}/"
 
-    def refresh_objects(self) -> None:
-        """Refresh the object list for the current bucket."""
+    def refresh_objects(self, on_complete: callable = None) -> None:
+        """Refresh the object list for the current bucket.
+
+        Args:
+            on_complete: Optional callback to call when loading is complete
+        """
+        self._on_load_complete_callback = on_complete
         self._load_bucket_objects()
 
     def focus(self) -> None:
         """Override focus to only focus the table if it's mounted."""
+        if self._table_mounted:
+            try:
+                table = self.query_one("#object-table", DataTable)
+                table.focus()
+            except Exception:
+                # Table not ready, focus the widget itself
+                super().focus()
+        else:
+            # If table not mounted, focus the widget itself
+            super().focus()
+
+    def focus_table(self) -> None:
+        """Focus the object table if it's available"""
         if self._table_mounted:
             try:
                 table = self.query_one("#object-table", DataTable)
