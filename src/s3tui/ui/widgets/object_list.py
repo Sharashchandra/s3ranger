@@ -1,6 +1,7 @@
 import threading
 
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
@@ -20,6 +21,12 @@ TABLE_COLUMNS = ["Name", "Type", "Modified", "Size"]
 
 class ObjectList(Static):
     """Widget for displaying S3 objects with navigation support."""
+
+    BINDINGS = [
+        Binding("d", "download", "Download"),
+        Binding("u", "upload", "Upload"),
+        Binding("delete", "delete_item", "Delete"),
+    ]
 
     # Reactive properties
     objects: list[dict] = reactive([])
@@ -407,3 +414,81 @@ class ObjectList(Static):
         else:
             # If table not mounted, focus the widget itself
             super().focus()
+
+    def action_download(self) -> None:
+        """Download selected items"""
+        # Get the currently focused object
+        s3_uri = self.get_s3_uri_for_focused_object()
+        focused_obj = self.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for download", severity="error")
+            return
+
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
+
+        # Import here to avoid circular imports
+        from s3tui.ui.modals.download_modal import DownloadModal
+
+        # Show the download modal
+        def on_download_result(result: bool) -> None:
+            if result:
+                # Download was successful, refresh the view if needed
+                self.refresh_objects()
+            # Always restore focus to the object list after modal closes
+            self.call_later(self.focus_table)
+
+        self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
+
+    def action_upload(self) -> None:
+        """Upload files to current location"""
+        # Get the current S3 location (bucket + prefix)
+        current_location = self.get_current_s3_location()
+
+        if not current_location:
+            self.notify("No bucket selected for upload", severity="error")
+            return
+
+        # Always upload to current location (bucket root or current prefix)
+        # This ensures we upload to the current directory, not to a focused folder
+        upload_destination = current_location
+
+        # Import here to avoid circular imports
+        from s3tui.ui.modals.upload_modal import UploadModal
+
+        # Show the upload modal
+        def on_upload_result(result: bool) -> None:
+            if result:
+                # Upload was successful, refresh the view
+                self.refresh_objects()
+            # Always restore focus to the object list after modal closes
+            self.call_later(self.focus_table)
+
+        self.app.push_screen(UploadModal(upload_destination, False), on_upload_result)
+
+    def action_delete_item(self) -> None:
+        """Delete selected items"""
+        # Get the currently focused object
+        s3_uri = self.get_s3_uri_for_focused_object()
+        focused_obj = self.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for deletion", severity="error")
+            return
+
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
+
+        # Import here to avoid circular imports
+        from s3tui.ui.modals.delete_modal import DeleteModal
+
+        # Show the delete modal
+        def on_delete_result(result: bool) -> None:
+            if result:
+                # Delete was successful, refresh the view
+                self.refresh_objects()
+            # Always restore focus to the object list after modal closes
+            self.call_later(self.focus_table)
+
+        self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
