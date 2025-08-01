@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer, ListView
 
+from s3tui.ui.modals.help_modal import HelpModal
 from s3tui.ui.widgets.bucket_list import BucketList
 from s3tui.ui.widgets.object_list import ObjectList
 from s3tui.ui.widgets.title_bar import TitleBar
@@ -16,7 +17,7 @@ class MainScreen(Screen):
         Binding("q", "quit", "Quit"),
         Binding("tab", "switch_panel", "Switch Panel"),
         Binding("r", "refresh", "Refresh"),
-        Binding("h", "help", "Help", show=False),
+        Binding("h", "help", "Help"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -133,8 +134,4 @@ class MainScreen(Screen):
 
     def action_help(self) -> None:
         """Show help information"""
-        # This could be a modal or a simple notification
-        self.notify(
-            "Help: Use 'q' to quit, 'tab' to switch panels, 'r' to refresh. When object list is focused: 'd' to download, 'u' to upload, 'delete' to delete items.",
-            severity="info",
-        )
+        self.app.push_screen(HelpModal())

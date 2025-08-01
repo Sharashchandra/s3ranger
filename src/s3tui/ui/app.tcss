@@ -791,3 +791,98 @@ DeleteModal {
     border: solid #b92621;
     color: #ffffff;
 }
+
+/* ====================================
+ * HELP MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+HelpModal {
+    align: center middle;
+    background: rgba(13, 17, 23, 0.8);
+}
+
+/* Main dialog container */
+#help-dialog {
+    width: 80;
+    max-width: 100;
+    height: auto;
+    max-height: 90%;
+    background: #161b22;
+    border: solid #30363d;
+    padding: 0;
+    overflow-y: auto;
+}
+
+/* Dialog header */
+#help-dialog-header {
+    dock: top;
+    height: auto;
+    background: #21262d;
+    border-bottom: solid #30363d;
+    padding: 1 2;
+}
+
+/* Dialog content */
+#help-dialog-content {
+    height: 1fr;
+    padding: 1 2;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+#help-dialog-content:focus {
+    border: solid #58a6ff;
+}
+
+/* Help sections */
+.help-section {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.help-section-title {
+    color: #58a6ff;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.help-text {
+    color: #c9d1d9;
+    margin-bottom: 1;
+}
+
+/* Keybindings container */
+.help-keybindings {
+    height: auto;
+    margin-bottom: 1;
+}
+
+/* Individual keybinding rows */
+.help-keybinding-row {
+    height: 3;
+    layout: horizontal;
+    margin-bottom: 1;
+    align: left middle;
+}
+
+.help-keybinding-key {
+    width: 15;
+    height: 3;
+    color: #ffd700;
+    text-style: bold;
+    background: #0d1117;
+    border: solid #30363d;
+    padding: 0 1;
+    content-align: center middle;
+    margin-right: 2;
+}
+
+.help-keybinding-desc {
+    width: 1fr;
+    height: 3;
+    color: #c9d1d9;
+    content-align: left middle;
+}
+
+
