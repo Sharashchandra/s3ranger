@@ -29,7 +29,7 @@ class MainScreen(Screen):
                 yield ObjectList(id="object-list")
 
             # Footer with key bindings - now integrated as part of main container
-            yield Footer(id="main-footer", show_command_palette=False)
+            yield Footer(id="main-footer")
 
     def on_mount(self) -> None:
         """Called when the screen is mounted. Set initial focus."""

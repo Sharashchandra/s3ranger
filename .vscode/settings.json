@@ -1,0 +1,120 @@
+{
+  // Diff editor settings
+  "diffEditor.renderMarginRevertIcon": true,
+  "diffEditor.renderSideBySide": true,
+  // Git settings
+  "git.untrackedChanges": "separate",
+
+  // Workbench settings
+  "workbench.editor.enablePreview": false,
+  // File settings
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.renderWhitespace": "all",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "sql-formatter.uppercase": true,
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [80],
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "simple-scratch.enableGlobalScratch": true,
+
+  //   Editor
+  // "editor.fontFamily": "'Fixedsys Excelsior 3.01'",
+  "editor.fontSize": 14,
+  "editor.fontLigatures": true,
+  "editor.renderWhitespace": "all",
+  "editor.fontFamily": "'FiraCode Nerd Font Mono', Menlo, Monaco, 'Courier New', monospace",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.comments.insertSpace": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.formatOnSaveMode": "modifications",
+
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": true,
+    "markdown": false,
+    "scminput": false
+  },
+
+  "python.defaultInterpreterPath": "/Users/sharashchandra.desai/.pyenv/versions/3.12.4/bin/python",
+  "workbench.colorTheme": "GitHub Dark Default",
+  "window.zoomLevel": 1,
+  "cSpell.userWords": ["dataframe", "TIKTOK"],
+  "gitlens.views.stashes.files.layout": "list",
+
+  // Ruff - Linter
+  "ruff.organizeImports": true,
+  "ruff.lineLength": 120,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "[sql]": {
+    "editor.formatOnSave": false,
+    "editor.trimAutoWhitespace": false,
+    "files.trimTrailingWhitespace": false
+  },
+  "github.copilot.chat.codeGeneration.useInstructionFiles": false,
+  "github.copilot.selectedCompletionModel": "",
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.packageIndexDepths": [
+
+    {
+      "name": "sklearn",
+      "depth": 2
+    },
+    {
+      "name": "matplotlib",
+      "depth": 2
+    },
+    {
+      "name": "scipy",
+      "depth": 2
+    },
+    {
+      "name": "django",
+      "depth": 2
+    },
+    {
+      "name": "flask",
+      "depth": 2
+    },
+    {
+      "name": "fastapi",
+      "depth": 2
+    },
+    {
+      "name": "cuda",
+      "depth": 3,
+      "includeAllSymbols": true
+    }
+  ],
+  "github.copilot.nextEditSuggestions.enabled": true
+}
