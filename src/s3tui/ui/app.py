@@ -54,6 +54,34 @@ class S3TUI(App):
         S3.set_profile_name(profile_name)
         S3.set_credentials(aws_access_key_id, aws_secret_access_key, aws_session_token)
 
+    def register_custom_themes(self) -> None:
+        # Import all themes
+        from s3tui.ui.themes import (
+            dracula_theme,
+            github_dark_theme,
+            sepia_theme,
+            solarized_theme,
+        )
+
+        self.register_theme(github_dark_theme)
+        self.register_theme(dracula_theme)
+        self.register_theme(solarized_theme)
+        self.register_theme(sepia_theme)
+
+    def unregister_builtin_themes(self) -> None:
+        """Unregister all built-in themes."""
+        from textual.theme import BUILTIN_THEMES
+
+        for theme in BUILTIN_THEMES.keys():
+            self.unregister_theme(theme)
+
     def on_mount(self) -> None:
         """Called when app starts."""
+        # Unregister built-in themes
+        self.unregister_builtin_themes()
+        # Register custom themes
+        self.register_custom_themes()
+
+        # Set initial theme
+        self.theme = "Github Dark"
         self.push_screen(MainScreen())

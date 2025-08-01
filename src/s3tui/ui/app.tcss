@@ -7,8 +7,8 @@
  * GLOBAL APP STYLES
  * ==================================== */
 App {
-    background: #0d1117;
-    color: #c9d1d9;
+    background: $background;
+    color: $foreground;
 }
 
 /* Common text styling */
@@ -21,8 +21,8 @@ Static {
  * MAIN SCREEN LAYOUT
  * ==================================== */
 #main-container {
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary 50%;
     layout: vertical;
     height: 100%;
 }
@@ -38,9 +38,9 @@ Static {
 #main-footer {
     dock: bottom;
     height: auto;
-    background: #0d1117;
-    border-top: solid #30363d;
-    color: #c9d1d9;
+    background: $background;
+    border-top: solid $primary 50%;
+    color: $foreground;
     padding: 0 1;
 }
 
@@ -50,7 +50,7 @@ Static {
 TitleBar {
     dock: top;
     height: auto;
-    border-bottom: solid #30363d;
+    border-bottom: solid $primary 50%;
     padding: 0 1;
 }
 
@@ -60,7 +60,7 @@ TitleBar {
 }
 
 #title {
-    color: #58a6ff;
+    color: $primary;
     content-align: left middle;
     text-style: none;
     width: auto;
@@ -74,17 +74,17 @@ TitleBar {
 }
 
 #connected-indicator {
-    color: #3fb950;
+    color: $success;
     width: auto;
     margin-right: 1;
 }
 
 #connected-indicator.error {
-    color: #da3633;
+    color: $error;
 }
 
 #aws-info {
-    color: #7d8590;
+    color: $secondary;
     width: auto;
     text-style: none;
 }
@@ -94,23 +94,23 @@ TitleBar {
  * ==================================== */
 BucketList {
     width: 40;
-    background: #0d1117;
-    border-right: solid #30363d;
+    background: $background;
+    border-right: solid $primary 50%;
     height: 100%;
 }
 
 #bucket-list-container {
     width: 100%;
-    background: #0d1117;
+    background: $background;
     height: 100%;
 }
 
 #bucket-panel-title {
     dock: top;
     height: 2;
-    background: #0d1117;
-    border-bottom: solid #30363d;
-    color: #f0f6fc;
+    background: $background;
+    border-bottom: solid $primary 50%;
+    color: $foreground;
     content-align: center middle;
     text-style: none;
     padding: 0 1;
@@ -120,29 +120,29 @@ BucketList {
     dock: top;
     height: 3;
     margin: 2 0 0 0;
-    background: #0d1117;
-    border: solid #30363d;
-    color: #c9d1d9;
+    background: $background;
+    border: solid $primary 50%;
+    color: $foreground;
 }
 
 #bucket-filter:focus {
-    border: solid #58a6ff;
+    border: solid $primary;
 }
 
 #bucket-help-text {
     dock: top;
     height: 1;
     padding: 0 1;
-    background: #0d1117;
-    color: #7d8590;
+    background: $background;
+    color: $secondary;
     text-style: none;
 }
 
 #bucket-list-view {
-    background: #0d1117;
-    scrollbar-background: #0d1117;
-    scrollbar-color: #30363d;
-    scrollbar-color-hover: #484f58;
+    background: $background;
+    scrollbar-background: $background;
+    scrollbar-color: $primary 50%;
+    scrollbar-color-hover: $primary;
     scrollbar-size: 1 1;
     height: 1fr;
 }
@@ -151,8 +151,8 @@ BucketList {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #0d1117;
-    color: #58a6ff;
+    background: $background;
+    color: $primary;
     text-style: none;
     display: none;
 }
@@ -165,11 +165,11 @@ BucketItem {
     padding: 1 1;
     border-left: solid transparent;
     border-bottom: none;
-    background: #0d1117;
+    background: $background;
 }
 
 BucketItem:hover {
-    background: #0d1117;
+    background: $surface;
 }
 
 BucketItem > * {
@@ -180,47 +180,47 @@ BucketItem > * {
 BucketItem.-active,
 BucketItem:focus,
 BucketItem.-highlight {
-    background: #0969da;
-    color: #ffffff;
-    border-left: solid #0969da;
+    background: $accent;
+    color: $background;
+    border-left: solid $accent;
 }
 
 BucketItem.-active .bucket-name,
 BucketItem:focus .bucket-name,
 BucketItem.-highlight .bucket-name {
-    color: #ffffff;
+    color: $secondary;
 }
 
 BucketItem.-active .bucket-meta,
 BucketItem:focus .bucket-meta,
 BucketItem.-highlight .bucket-meta {
-    color: #b6e3ff;
+    color: $secondary;
 }
 
 /* ListView Selection States (consolidated) */
 ListView > ListItem.-active,
 ListView > ListItem:focus,
 ListView > ListItem.-cursor {
-    background: #0969da;
-    color: #ffffff;
-    border-left: solid #ffffff;
+    background: $accent;
+    color: $background;
+    border-left: solid $background;
 }
 
 ListView > ListItem.-active .bucket-name,
 ListView > ListItem:focus .bucket-name,
 ListView > ListItem.-cursor .bucket-name {
-    color: #ffffff;
+    color: $background;
 }
 
 ListView > ListItem.-active .bucket-meta,
 ListView > ListItem:focus .bucket-meta,
 ListView > ListItem.-cursor .bucket-meta {
-    color: #b6e3ff;
+    color: $background;
 }
 
 /* Bucket Item Text Elements */
 .bucket-name {
-    color: #c9d1d9;
+    color: $foreground;
     text-style: none;
     height: auto;
     width: 100%;
@@ -230,7 +230,7 @@ ListView > ListItem.-cursor .bucket-meta {
 }
 
 .bucket-meta {
-    color: #7d8590;
+    color: $secondary;
     text-style: none;
     height: 1;
     width: 100%;
@@ -243,14 +243,14 @@ ListView > ListItem.-cursor .bucket-meta {
  * ==================================== */
 ObjectList {
     width: 1fr;
-    background: #0d1117;
+    background: $background;
     height: 100%;
     min-width: 0;
 }
 
 #object-list-container {
     width: 100%;
-    background: #0d1117;
+    background: $background;
     height: 100%;
     layout: vertical;
     margin: 0;
@@ -263,25 +263,25 @@ ObjectList {
 Breadcrumb {
     height: 2;
     padding: 0 1;
-    background: #0d1117;
-    color: #f0f6fc;
-    border-bottom: solid #30363d;
+    background: $background;
+    color: $foreground;
+    border-bottom: solid $primary 50%;
     text-style: none;
     content-align: left middle;
 }
 
 Breadcrumb:hover {
-    background: #1f2937;
+    background: $surface;
 }
 
 #breadcrumb-bar {
     dock: top;
     height: 2;
     min-height: 2;
-    background: #0d1117;
-    border-bottom: solid #30363d;
+    background: $background;
+    border-bottom: solid $primary 50%;
     padding: 0 1;
-    color: #f0f6fc;
+    color: $foreground;
     content-align: left middle;
     margin: 0;
     width: 100%;
@@ -295,19 +295,19 @@ Breadcrumb:hover {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #0d1117;
-    color: #58a6ff;
+    background: $background;
+    color: $primary;
     text-style: none;
     display: none;
 }
 
 #object-table {
-    background: #0d1117;
+    background: $background;
     height: 1fr;
     width: 100%;
-    scrollbar-background: #0d1117;
-    scrollbar-color: #30363d;
-    scrollbar-color-hover: #484f58;
+    scrollbar-background: $background;
+    scrollbar-color: $primary 50%;
+    scrollbar-color-hover: $primary;
     scrollbar-size: 1 1;
     border: none;
     margin: 0;
@@ -316,8 +316,8 @@ Breadcrumb:hover {
 
 /* DataTable styling for object list */
 DataTable {
-    background: #0d1117;
-    color: #c9d1d9;
+    background: $background;
+    color: $foreground;
     border: none;
     height: 1fr;
     width: 100%;
@@ -328,9 +328,9 @@ DataTable {
 }
 
 DataTable > .datatable--header {
-    background: #0d1117;
-    color: #7d8590;
-    border-bottom: solid #30363d;
+    background: $background;
+    color: $secondary;
+    border-bottom: solid $primary 50%;
     padding: 0 1;
     height: auto;
     min-height: 2;
@@ -343,31 +343,31 @@ DataTable > .datatable--body {
 }
 
 DataTable > .datatable--header-hover {
-    background: #1f2937;
+    background: $surface;
 }
 
 DataTable > .datatable--cursor {
-    background: #0d1117;
-    color: #58a6ff;
-    border-left: thick #58a6ff;
+    background: $background;
+    color: $primary;
+    border-left: thick $primary;
 }
 
 DataTable > .datatable--cursor-hover {
-    background: #0d419d;
-    color: #ffffff;
-    border-left: thick #ffffff;
+    background: $accent;
+    color: $background;
+    border-left: thick $background;
 }
 
 DataTable > .datatable--odd-row {
-    background: #0d1117;
+    background: $background;
 }
 
 DataTable > .datatable--even-row {
-    background: #0d1117;
+    background: $background;
 }
 
 DataTable > .datatable--hover {
-    background: #0d1117;
+    background: $background;
 }
 
 /* Remove zebra stripes and focus on clean lines */
@@ -376,13 +376,13 @@ DataTable .datatable--row {
 }
 
 DataTable .datatable--row:hover {
-    background: #0d1117;
+    background: $background;
 }
 
 DataTable .datatable--row.-cursor {
-    background: #0d1117;
-    color: #58a6ff;
-    border-left: thick #58a6ff;
+    background: $background;
+    color: $primary;
+    border-left: thick $primary;
 }
 
 /* ====================================
@@ -402,8 +402,8 @@ DownloadModal {
     height: auto;
     min-height: 25;
     max-height: 50;
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary;
 }
 
 /* Download loading indicator */
@@ -411,8 +411,8 @@ DownloadModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #0d1117;
-    color: #58a6ff;
+    background: $background;
+    color: $primary;
     text-style: none;
     display: none;
 }
@@ -421,19 +421,19 @@ DownloadModal {
 #download-dialog-header {
     height: auto;
     width: 100%;
-    background: #1f2937;
-    border-bottom: solid #30363d;
+    background: $surface;
+    border-bottom: solid $primary 50%;
     padding: 1;
 }
 
 .dialog-title {
-    color: #f0f6fc;
+    color: $foreground;
     text-style: none;
     margin-bottom: 1;
 }
 
 .dialog-subtitle {
-    color: #7d8590;
+    color: $secondary;
     text-style: none;
 }
 
@@ -451,28 +451,28 @@ DownloadModal {
 }
 
 .field-label {
-    color: #f0f6fc;
+    color: $foreground;
     text-style: none;
     margin-bottom: 0;
 }
 
 .field-value {
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary 50%;
     padding: 1 2;
-    color: #c9d1d9;
+    color: $foreground;
     width: 100%;
 }
 
 .field-value.readonly {
-    background: #21262d;
-    color: #7d8590;
+    background: $surface;
+    color: $secondary;
 }
 
 #source-field {
-    background: #21262d;
-    color: #7d8590;
-    border: solid #30363d;
+    background: $surface;
+    color: $secondary;
+    border: solid $primary 50%;
     padding: 0 1;
     height: 3;
     width: 100%;
@@ -481,26 +481,26 @@ DownloadModal {
 }
 
 .field-input {
-    background: #0d1117;
-    border: solid #30363d;
-    color: #c9d1d9;
+    background: $background;
+    border: solid $primary 50%;
+    color: $foreground;
     width: 100%;
 }
 
 .field-input:focus {
-    border: solid #58a6ff;
-    background: #0d1117;
+    border: solid $primary;
+    background: $background;
 }
 
 #destination-input {
-    background: #0d1117;
-    border: solid #30363d;
-    color: #c9d1d9;
+    background: $background;
+    border: solid $primary 50%;
+    color: $foreground;
     width: 1fr;
 }
 
 #destination-input:focus {
-    border: solid #58a6ff;
+    border: solid $primary;
 }
 
 /* Input with button container */
@@ -515,7 +515,7 @@ DownloadModal {
 .file-picker-button {
     background: transparent;
     border: none;
-    color: #c9d1d9;
+    color: $foreground;
     width: auto;
     min-width: 4;
     height: 3;
@@ -524,17 +524,17 @@ DownloadModal {
 }
 
 .file-picker-button:hover {
-    background: #30363d;
+    background: $primary 50%;
     border: none;
 }
 
 .file-picker-button:focus {
-    background: #30363d;
+    background: $primary 50%;
     border: none;
 }
 
 .field-help {
-    color: #7d8590;
+    color: $secondary;
     text-style: none;
     margin-top: 0;
 }
@@ -544,8 +544,8 @@ DownloadModal {
     height: auto;
     min-height: 6;
     width: 100%;
-    background: #1f2937;
-    border-top: solid #30363d;
+    background: $surface;
+    border-top: solid $primary 50%;
     padding: 1;
     layout: horizontal;
     content-align: left middle;
@@ -581,7 +581,7 @@ DownloadModal {
 }
 
 .keybinding {
-    color: #7d8590;
+    color: $secondary;
     text-style: none;
     margin-right: 2;
     width: 1fr;
@@ -598,37 +598,37 @@ DownloadModal {
 
 .dialog-actions Button {
     margin-left: 1;
-    background: #48505bff;
+    background: $surface;
     border: none;
-    color: #c9d1d9;
+    color: $foreground;
     min-width: 12;
     height: 3;
     padding: 0 2;
 }
 
 .dialog-actions Button:hover {
-    background: #30363d;
+    background: $primary 50%;
     border: none;
-    color: #f0f6fc;
+    color: $foreground;
 }
 
 
 .dialog-actions Button.primary {
-    background: #3fb950;
-    border: solid #3fb950;
-    color: #000000;
+    background: $success;
+    border: solid $success;
+    color: $background;
 }
 
 .dialog-actions Button.primary:hover {
-    background: #2ea043;
-    border: solid #2ea043;
-    color: #000000;
+    background: $success;
+    border: solid $success;
+    color: $background;
 }
 
 .dialog-actions Button:disabled {
-    background: #0d1117;
-    border: solid #21262d;
-    color: #484f58;
+    background: $background;
+    border: solid $surface;
+    color: $secondary;
 }
 
 /* ====================================
@@ -648,8 +648,8 @@ UploadModal {
     height: auto;
     min-height: 25;
     max-height: 50;
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary;
 }
 
 /* Upload loading indicator */
@@ -657,8 +657,8 @@ UploadModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #0d1117;
-    color: #58a6ff;
+    background: $background;
+    color: $primary;
     text-style: none;
     display: none;
 }
@@ -667,8 +667,8 @@ UploadModal {
 #upload-dialog-header {
     height: auto;
     width: 100%;
-    background: #1f2937;
-    border-bottom: solid #30363d;
+    background: $surface;
+    border-bottom: solid $primary 50%;
     padding: 1;
 }
 
@@ -680,20 +680,20 @@ UploadModal {
 }
 
 #source-input {
-    background: #0d1117;
-    border: solid #30363d;
-    color: #c9d1d9;
+    background: $background;
+    border: solid $primary 50%;
+    color: $foreground;
     width: 1fr;
 }
 
 #source-input:focus {
-    border: solid #58a6ff;
+    border: solid $primary;
 }
 
 #destination-field {
-    background: #21262d;
-    color: #7d8590;
-    border: solid #30363d;
+    background: $surface;
+    color: $secondary;
+    border: solid $primary 50%;
     padding: 0 1;
     height: 3;
     width: 100%;
@@ -706,8 +706,8 @@ UploadModal {
     height: auto;
     min-height: 6;
     width: 100%;
-    background: #1f2937;
-    border-top: solid #30363d;
+    background: $surface;
+    border-top: solid $primary 50%;
     padding: 1;
     layout: horizontal;
     content-align: left middle;
@@ -730,8 +730,8 @@ DeleteModal {
     height: auto;
     min-height: 20;
     max-height: 40;
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary;
 }
 
 /* Delete loading indicator */
@@ -739,8 +739,8 @@ DeleteModal {
     height: 100%;
     width: 100%;
     content-align: center middle;
-    background: #0d1117;
-    color: #58a6ff;
+    background: $background;
+    color: $primary;
     text-style: none;
     display: none;
 }
@@ -749,8 +749,8 @@ DeleteModal {
 #delete-dialog-header {
     height: auto;
     width: 100%;
-    background: #1f2937;
-    border-bottom: solid #30363d;
+    background: $surface;
+    border-bottom: solid $primary 50%;
     padding: 1;
 }
 
@@ -766,8 +766,8 @@ DeleteModal {
     height: auto;
     min-height: 6;
     width: 100%;
-    background: #1f2937;
-    border-top: solid #30363d;
+    background: $surface;
+    border-top: solid $primary 50%;
     padding: 1;
     layout: horizontal;
     content-align: left middle;
@@ -775,21 +775,21 @@ DeleteModal {
 
 /* Delete button styling */
 .dialog-actions Button.delete-button {
-    background: #da3633;
-    border: solid #da3633;
-    color: #ffffff;
+    background: $error;
+    border: solid $error;
+    color: $background;
 }
 
 .dialog-actions Button.delete-button:hover {
-    background: #b92621;
-    border: solid #b92621;
-    color: #ffffff;
+    background: $error;
+    border: solid $error;
+    color: $background;
 }
 
 .dialog-actions Button.delete-button:focus {
-    background: #b92621;
-    border: solid #b92621;
-    color: #ffffff;
+    background: $error;
+    border: solid $error;
+    color: $background;
 }
 
 /* ====================================

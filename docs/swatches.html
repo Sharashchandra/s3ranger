@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Palette Showcase - Terminal UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            line-height: 1.4;
+            font-size: 13px;
+        }
+
+        .palette-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .palette {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #161b22;
+            position: relative;
+        }
+
+        .palette::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-color, #58a6ff);
+        }
+
+        .palette-header {
+            padding: 16px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .palette-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .palette-description {
+            font-size: 12px;
+            color: #7d8590;
+            margin-bottom: 12px;
+        }
+
+        .color-swatches {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .color-swatch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .swatch-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            position: relative;
+        }
+
+        .swatch-label {
+            font-size: 9px;
+            color: #7d8590;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .background-demo {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .bg-demo-item {
+            flex: 1;
+            padding: 8px;
+            border-radius: 2px;
+            text-align: center;
+            font-size: 10px;
+            border: 1px solid #30363d;
+        }
+
+        .palette-demo {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .demo-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .demo-label {
+            font-size: 10px;
+            color: #7d8590;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-widgets {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .demo-widget {
+            padding: 6px 12px;
+            border: 1px solid;
+            border-radius: 2px;
+            font-size: 12px;
+            transition: all 0.1s ease;
+        }
+
+        /* Palette Primary Colors */
+        .github-dark { --primary-color: #58a6ff; }
+        .cyberpunk { --primary-color: #00ff9f; }
+        .ocean-blue { --primary-color: #4fc3f7; }
+        .dracula { --primary-color: #bd93f9; }
+        .monochrome { --primary-color: #ffffff; }
+        .warm-terminal { --primary-color: #ffb347; }
+        .nord { --primary-color: #88c0d0; }
+        .solarized { --primary-color: #268bd2; }
+        .gruvbox { --primary-color: #fabd2f; }
+        .tokyo-night { --primary-color: #7aa2f7; }
+        .light-professional { --primary-color: #0366d6; }
+        .sepia { --primary-color: #8b4513; }
+        .high-contrast { --primary-color: #ffff00; }
+        .soft-purple { --primary-color: #9c88ff; }
+        .forest-green { --primary-color: #7cb342; }
+
+        /* Palette 1: GitHub Dark (Current) */
+        .github-dark .palette-title { color: #58a6ff; }
+        .github-dark .demo-widget.normal {
+            background: #161b22;
+            border-color: #30363d;
+            color: #c9d1d9;
+        }
+        .github-dark .demo-widget.focused {
+            background: #1f2937;
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+        .github-dark .demo-widget.selected {
+            background: #0969da;
+            border-color: #0969da;
+            color: #ffffff;
+        }
+        .github-dark .demo-widget.success {
+            background: #0d2818;
+            border-color: #3fb950;
+            color: #3fb950;
+        }
+        .github-dark .demo-widget.error {
+            background: #2d0d0d;
+            border-color: #da3633;
+            color: #f85149;
+        }
+
+        /* Palette 2: Cyberpunk */
+        .cyberpunk .palette-title { color: #00ff9f; }
+        .cyberpunk .demo-widget.normal {
+            background: #161b22;
+            border-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+        .cyberpunk .demo-widget.focused {
+            background: #1a2332;
+            border-color: #00ff9f;
+            color: #00ff9f;
+            box-shadow: 0 0 8px rgba(0, 255, 159, 0.3);
+        }
+        .cyberpunk .demo-widget.selected {
+            background: #ff006e;
+            border-color: #ff006e;
+            color: #ffffff;
+        }
+        .cyberpunk .demo-widget.success {
+            background: #0d2818;
+            border-color: #00ff9f;
+            color: #00ff9f;
+        }
+        .cyberpunk .demo-widget.error {
+            background: #330d1a;
+            border-color: #ff006e;
+            color: #ff4081;
+        }
+
+        /* Palette 3: Ocean Blue */
+        .ocean-blue .palette-title { color: #4fc3f7; }
+        .ocean-blue .demo-widget.normal {
+            background: #161b22;
+            border-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        .ocean-blue .demo-widget.focused {
+            background: #1e2a3a;
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+        .ocean-blue .demo-widget.selected {
+            background: #2980b9;
+            border-color: #2980b9;
+            color: #ffffff;
+        }
+        .ocean-blue .demo-widget.success {
+            background: #0d2b1f;
+            border-color: #26a69a;
+            color: #26a69a;
+        }
+        .ocean-blue .demo-widget.error {
+            background: #2d1b1a;
+            border-color: #e74c3c;
+            color: #ff5252;
+        }
+
+        /* Palette 4: Dracula Inspired */
+        .dracula .palette-title { color: #bd93f9; }
+        .dracula .demo-widget.normal {
+            background: #161b22;
+            border-color: #44475a;
+            color: #f8f8f2;
+        }
+        .dracula .demo-widget.focused {
+            background: #2a2d3a;
+            border-color: #bd93f9;
+            color: #bd93f9;
+        }
+        .dracula .demo-widget.selected {
+            background: #6272a4;
+            border-color: #6272a4;
+            color: #f8f8f2;
+        }
+        .dracula .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #50fa7b;
+            color: #50fa7b;
+        }
+        .dracula .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #ff5555;
+            color: #ff5555;
+        }
+
+        /* Palette 5: Minimal Monochrome */
+        .monochrome .palette-title { color: #ffffff; }
+        .monochrome .demo-widget.normal {
+            background: #161b22;
+            border-color: #404040;
+            color: #e0e0e0;
+        }
+        .monochrome .demo-widget.focused {
+            background: #2a2a2a;
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+        .monochrome .demo-widget.selected {
+            background: #808080;
+            border-color: #808080;
+            color: #000000;
+        }
+        .monochrome .demo-widget.success {
+            background: #1a2a1a;
+            border-color: #cccccc;
+            color: #cccccc;
+        }
+        .monochrome .demo-widget.error {
+            background: #2a1a1a;
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+
+        /* Palette 6: Warm Terminal */
+        .warm-terminal .palette-title { color: #ffb347; }
+        .warm-terminal .demo-widget.normal {
+            background: #161b22;
+            border-color: #3c3c3c;
+            color: #d4d4d4;
+        }
+        .warm-terminal .demo-widget.focused {
+            background: #2a2520;
+            border-color: #ffb347;
+            color: #ffb347;
+        }
+        .warm-terminal .demo-widget.selected {
+            background: #d2691e;
+            border-color: #d2691e;
+            color: #ffffff;
+        }
+        .warm-terminal .demo-widget.success {
+            background: #1f2a1a;
+            border-color: #98d982;
+            color: #98d982;
+        }
+        .warm-terminal .demo-widget.error {
+            background: #2a1f1a;
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        /* Palette 7: Nord Theme */
+        .nord .palette-title { color: #88c0d0; }
+        .nord .demo-widget.normal {
+            background: #161b22;
+            border-color: #4c566a;
+            color: #d8dee9;
+        }
+        .nord .demo-widget.focused {
+            background: #2e3440;
+            border-color: #88c0d0;
+            color: #88c0d0;
+        }
+        .nord .demo-widget.selected {
+            background: #5e81ac;
+            border-color: #5e81ac;
+            color: #eceff4;
+        }
+        .nord .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #a3be8c;
+            color: #a3be8c;
+        }
+        .nord .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #bf616a;
+            color: #bf616a;
+        }
+
+        /* Palette 8: Solarized Dark */
+        .solarized .palette-title { color: #268bd2; }
+        .solarized .demo-widget.normal {
+            background: #161b22;
+            border-color: #586e75;
+            color: #839496;
+        }
+        .solarized .demo-widget.focused {
+            background: #073642;
+            border-color: #268bd2;
+            color: #268bd2;
+        }
+        .solarized .demo-widget.selected {
+            background: #6c71c4;
+            border-color: #6c71c4;
+            color: #fdf6e3;
+        }
+        .solarized .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #859900;
+            color: #859900;
+        }
+        .solarized .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #dc322f;
+            color: #dc322f;
+        }
+
+        /* Palette 9: Gruvbox Dark */
+        .gruvbox .palette-title { color: #fabd2f; }
+        .gruvbox .demo-widget.normal {
+            background: #161b22;
+            border-color: #665c54;
+            color: #ebdbb2;
+        }
+        .gruvbox .demo-widget.focused {
+            background: #3c3836;
+            border-color: #fabd2f;
+            color: #fabd2f;
+        }
+        .gruvbox .demo-widget.selected {
+            background: #458588;
+            border-color: #458588;
+            color: #fbf1c7;
+        }
+        .gruvbox .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #98971a;
+            color: #98971a;
+        }
+        .gruvbox .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #cc241d;
+            color: #fb4934;
+        }
+
+        /* Palette 10: Tokyo Night */
+        .tokyo-night .palette-title { color: #7aa2f7; }
+        .tokyo-night .demo-widget.normal {
+            background: #161b22;
+            border-color: #565f89;
+            color: #c0caf5;
+        }
+        .tokyo-night .demo-widget.focused {
+            background: #1a1b26;
+            border-color: #7aa2f7;
+            color: #7aa2f7;
+        }
+        .tokyo-night .demo-widget.selected {
+            background: #7c3aed;
+            border-color: #7c3aed;
+            color: #c0caf5;
+        }
+        .tokyo-night .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #9ece6a;
+            color: #9ece6a;
+        }
+        .tokyo-night .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #f7768e;
+            color: #f7768e;
+        }
+
+        /* Light Theme Palettes with Different Backgrounds */
+
+        /* Palette 11: Light Professional */
+        .light-professional {
+            background: #ffffff !important;
+        }
+        .light-professional .palette-title { color: #0366d6; }
+        .light-professional .demo-widget.normal {
+            background: #f6f8fa;
+            border-color: #d1d9e0;
+            color: #24292f;
+        }
+        .light-professional .demo-widget.focused {
+            background: #e1f5fe;
+            border-color: #0366d6;
+            color: #0366d6;
+        }
+        .light-professional .demo-widget.selected {
+            background: #0366d6;
+            border-color: #0366d6;
+            color: #ffffff;
+        }
+        .light-professional .demo-widget.success {
+            background: #e6ffed;
+            border-color: #28a745;
+            color: #28a745;
+        }
+        .light-professional .demo-widget.error {
+            background: #ffeaea;
+            border-color: #d73a49;
+            color: #d73a49;
+        }
+
+        /* Palette 12: Sepia Terminal */
+        .sepia {
+            background: #f4f1e8 !important;
+        }
+        .sepia .palette {
+            background: #ede6d3 !important;
+            border-color: #d4c5a9 !important;
+        }
+        .sepia .palette-title { color: #8b4513; }
+        .sepia .demo-widget.normal {
+            background: #f4f1e8;
+            border-color: #d4c5a9;
+            color: #5d4037;
+        }
+        .sepia .demo-widget.focused {
+            background: #ede6d3;
+            border-color: #8b4513;
+            color: #8b4513;
+        }
+        .sepia .demo-widget.selected {
+            background: #8b4513;
+            border-color: #8b4513;
+            color: #f4f1e8;
+        }
+        .sepia .demo-widget.success {
+            background: #e8f5e8;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        .sepia .demo-widget.error {
+            background: #fdeaea;
+            border-color: #d32f2f;
+            color: #c62828;
+        }
+
+        /* Palette 13: High Contrast Dark */
+        .high-contrast .palette-title { color: #ffffff; }
+        .high-contrast .demo-widget.normal {
+            background: #000000;
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+        .high-contrast .demo-widget.focused {
+            background: #ffff00;
+            border-color: #000000;
+            color: #000000;
+        }
+        .high-contrast .demo-widget.selected {
+            background: #00ffff;
+            border-color: #000000;
+            color: #000000;
+        }
+        .high-contrast .demo-widget.success {
+            background: #00ff00;
+            border-color: #000000;
+            color: #000000;
+        }
+        .high-contrast .demo-widget.error {
+            background: #ff0000;
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+
+        /* Palette 14: Soft Purple */
+        .soft-purple .palette-title { color: #9c88ff; }
+        .soft-purple .demo-widget.normal {
+            background: #161b22;
+            border-color: #483d8b;
+            color: #e6e0ff;
+        }
+        .soft-purple .demo-widget.focused {
+            background: #2a2040;
+            border-color: #9c88ff;
+            color: #9c88ff;
+        }
+        .soft-purple .demo-widget.selected {
+            background: #6a5acd;
+            border-color: #6a5acd;
+            color: #ffffff;
+        }
+        .soft-purple .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #90ee90;
+            color: #90ee90;
+        }
+        .soft-purple .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #ff69b4;
+            color: #ff69b4;
+        }
+
+        /* Palette 15: Forest Green */
+        .forest-green .palette-title { color: #7cb342; }
+        .forest-green .demo-widget.normal {
+            background: #161b22;
+            border-color: #2e5d31;
+            color: #c8e6c9;
+        }
+        .forest-green .demo-widget.focused {
+            background: #1b2e1b;
+            border-color: #7cb342;
+            color: #7cb342;
+        }
+        .forest-green .demo-widget.selected {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: #ffffff;
+        }
+        .forest-green .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #8bc34a;
+            color: #8bc34a;
+        }
+        .forest-green .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #f44336;
+            color: #ef5350;
+        }
+        /* Palette 16: Midnight Blue */
+        .midnight-blue { --primary-color: #1e90ff; }
+        .midnight-blue {
+            background: #191970 !important;
+        }
+        .midnight-blue .palette {
+            background: #0f0f23 !important;
+            border-color: #2e2e5e !important;
+        }
+        .midnight-blue .palette-title { color: #1e90ff; }
+        .midnight-blue .demo-widget.normal {
+            background: #0f0f23;
+            border-color: #2e2e5e;
+            color: #e6f3ff;
+        }
+        .midnight-blue .demo-widget.focused {
+            background: #1a1a40;
+            border-color: #1e90ff;
+            color: #1e90ff;
+        }
+        .midnight-blue .demo-widget.selected {
+            background: #4169e1;
+            border-color: #4169e1;
+            color: #ffffff;
+        }
+        .midnight-blue .demo-widget.success {
+            background: #0d2818;
+            border-color: #32cd32;
+            color: #32cd32;
+        }
+        .midnight-blue .demo-widget.error {
+            background: #2d0d0d;
+            border-color: #ff4500;
+            color: #ff4500;
+        }
+
+        /* Palette 17: Terminal Green */
+        .terminal-green { --primary-color: #00ff00; }
+        .terminal-green {
+            background: #001100 !important;
+        }
+        .terminal-green .palette {
+            background: #002200 !important;
+            border-color: #004400 !important;
+        }
+        .terminal-green .palette-title { color: #00ff00; }
+        .terminal-green .demo-widget.normal {
+            background: #002200;
+            border-color: #004400;
+            color: #00ff00;
+        }
+        .terminal-green .demo-widget.focused {
+            background: #003300;
+            border-color: #00ff00;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        .terminal-green .demo-widget.selected {
+            background: #00aa00;
+            border-color: #00aa00;
+            color: #000000;
+        }
+        .terminal-green .demo-widget.success {
+            background: #003300;
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        .terminal-green .demo-widget.error {
+            background: #330000;
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+
+        /* Palette 18: Rose Gold */
+        .rose-gold { --primary-color: #e91e63; }
+        .rose-gold {
+            background: #fdf2f8 !important;
+        }
+        .rose-gold .palette {
+            background: #fce7f3 !important;
+            border-color: #f3d1dc !important;
+        }
+        .rose-gold .palette-title { color: #e91e63; }
+        .rose-gold .demo-widget.normal {
+            background: #fdf2f8;
+            border-color: #f3d1dc;
+            color: #831843;
+        }
+        .rose-gold .demo-widget.focused {
+            background: #fce7f3;
+            border-color: #e91e63;
+            color: #e91e63;
+        }
+        .rose-gold .demo-widget.selected {
+            background: #e91e63;
+            border-color: #e91e63;
+            color: #ffffff;
+        }
+        .rose-gold .demo-widget.success {
+            background: #ecfdf5;
+            border-color: #10b981;
+            color: #047857;
+        }
+        .rose-gold .demo-widget.error {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+
+        /* Palette 19: Amber Terminal */
+        .amber-terminal { --primary-color: #fbbf24; }
+        .amber-terminal {
+            background: #451a03 !important;
+        }
+        .amber-terminal .palette {
+            background: #78350f !important;
+            border-color: #92400e !important;
+        }
+        .amber-terminal .palette-title { color: #fbbf24; }
+        .amber-terminal .demo-widget.normal {
+            background: #78350f;
+            border-color: #92400e;
+            color: #fcd34d;
+        }
+        .amber-terminal .demo-widget.focused {
+            background: #92400e;
+            border-color: #fbbf24;
+            color: #fbbf24;
+        }
+        .amber-terminal .demo-widget.selected {
+            background: #d97706;
+            border-color: #d97706;
+            color: #ffffff;
+        }
+        .amber-terminal .demo-widget.success {
+            background: #14532d;
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+        .amber-terminal .demo-widget.error {
+            background: #7f1d1d;
+            border-color: #dc2626;
+            color: #f87171;
+        }
+
+        /* Palette 20: Ice Blue */
+        .ice-blue { --primary-color: #67e8f9; }
+        .ice-blue {
+            background: #cffafe !important;
+        }
+        .ice-blue .palette {
+            background: #ecfeff !important;
+            border-color: #a5f3fc !important;
+        }
+        .ice-blue .palette-title { color: #0891b2; }
+        .ice-blue .demo-widget.normal {
+            background: #ecfeff;
+            border-color: #a5f3fc;
+            color: #0e7490;
+        }
+        .ice-blue .demo-widget.focused {
+            background: #cffafe;
+            border-color: #0891b2;
+            color: #0891b2;
+        }
+        .ice-blue .demo-widget.selected {
+            background: #0891b2;
+            border-color: #0891b2;
+            color: #ffffff;
+        }
+        .ice-blue .demo-widget.success {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #047857;
+        }
+        .ice-blue .demo-widget.error {
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+
+        /* Palette 21: Neon Pink */
+        .neon-pink { --primary-color: #ff10f0; }
+        .neon-pink .palette-title { color: #ff10f0; }
+        .neon-pink .demo-widget.normal {
+            background: #161b22;
+            border-color: #4a1a4a;
+            color: #ffb3ff;
+        }
+        .neon-pink .demo-widget.focused {
+            background: #2a1a2a;
+            border-color: #ff10f0;
+            color: #ff10f0;
+            box-shadow: 0 0 10px rgba(255, 16, 240, 0.4);
+        }
+        .neon-pink .demo-widget.selected {
+            background: #c21292;
+            border-color: #c21292;
+            color: #ffffff;
+        }
+        .neon-pink .demo-widget.success {
+            background: #1a2b1a;
+            border-color: #39ff14;
+            color: #39ff14;
+        }
+        .neon-pink .demo-widget.error {
+            background: #2b1a1a;
+            border-color: #ff0040;
+            color: #ff0040;
+        }
+
+        /* Palette 22: Vintage Terminal */
+        .vintage-terminal { --primary-color: #ff8c00; }
+        .vintage-terminal {
+            background: #2e1a00 !important;
+        }
+        .vintage-terminal .palette {
+            background: #3d2600 !important;
+            border-color: #5c3900 !important;
+        }
+        .vintage-terminal .palette-title { color: #ff8c00; }
+        .vintage-terminal .demo-widget.normal {
+            background: #3d2600;
+            border-color: #5c3900;
+            color: #ffcc80;
+        }
+        .vintage-terminal .demo-widget.focused {
+            background: #4d3200;
+            border-color: #ff8c00;
+            color: #ff8c00;
+        }
+        .vintage-terminal .demo-widget.selected {
+            background: #e65100;
+            border-color: #e65100;
+            color: #ffffff;
+        }
+        .vintage-terminal .demo-widget.success {
+            background: #1b5e20;
+            border-color: #4caf50;
+            color: #81c784;
+        }
+        .vintage-terminal .demo-widget.error {
+            background: #b71c1c;
+            border-color: #f44336;
+            color: #ef5350;
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #f0f6fc; margin-bottom: 8px;">Color Palette Options</h1>
+        <p style="color: #7d8590; font-size: 14px;">Background: #0d1117 | Choose a palette that works best for your S3 TUI</p>
+    </div>
+
+    <div class="palette-container">
+        <!-- GitHub Dark (Current) -->
+        <div class="palette github-dark">
+            <div class="palette-header">
+                <div class="palette-title">GitHub Dark (Current)</div>
+                <div class="palette-description">Professional, widely recognized, excellent contrast</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #c9d1d9;"></div>
+                        <div class="swatch-label">Primary Text<br>#c9d1d9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f0f6fc;"></div>
+                        <div class="swatch-label">Bright Text<br>#f0f6fc</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #7d8590;"></div>
+                        <div class="swatch-label">Muted Text<br>#7d8590</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #58a6ff;"></div>
+                        <div class="swatch-label">Focus<br>#58a6ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0969da;"></div>
+                        <div class="swatch-label">Selected<br>#0969da</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #3fb950;"></div>
+                        <div class="swatch-label">Success<br>#3fb950</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #da3633;"></div>
+                        <div class="swatch-label">Error<br>#da3633</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #161b22;"></div>
+                        <div class="swatch-label">Panel BG<br>#161b22</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #30363d;"></div>
+                        <div class="swatch-label">Border<br>#30363d</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #58a6ff;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #58a6ff;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1f2937; color: #58a6ff;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cyberpunk -->
+        <div class="palette cyberpunk">
+            <div class="palette-header">
+                <div class="palette-title">Cyberpunk Neon</div>
+                <div class="palette-description">High contrast, futuristic, eye-catching focus states</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e0e0e0;"></div>
+                        <div class="swatch-label">Primary Text<br>#e0e0e0</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #888888;"></div>
+                        <div class="swatch-label">Muted Text<br>#888888</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff9f;"></div>
+                        <div class="swatch-label">Focus<br>#00ff9f</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff006e;"></div>
+                        <div class="swatch-label">Selected<br>#ff006e</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff9f;"></div>
+                        <div class="swatch-label">Success<br>#00ff9f</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff4081;"></div>
+                        <div class="swatch-label">Error<br>#ff4081</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #161b22;"></div>
+                        <div class="swatch-label">Panel BG<br>#161b22</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #2a2a2a;"></div>
+                        <div class="swatch-label">Border<br>#2a2a2a</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #00ff9f;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #00ff9f;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1a2332; color: #00ff9f;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ocean Blue -->
+        <div class="palette ocean-blue">
+            <div class="palette-header">
+                <div class="palette-title">Ocean Blue</div>
+                <div class="palette-description">Calming, professional, easy on the eyes for long sessions</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ecf0f1;"></div>
+                        <div class="swatch-label">Primary Text<br>#ecf0f1</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #95a5a6;"></div>
+                        <div class="swatch-label">Muted Text<br>#95a5a6</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4fc3f7;"></div>
+                        <div class="swatch-label">Focus<br>#4fc3f7</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #2980b9;"></div>
+                        <div class="swatch-label">Selected<br>#2980b9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #26a69a;"></div>
+                        <div class="swatch-label">Success<br>#26a69a</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e74c3c;"></div>
+                        <div class="swatch-label">Error<br>#e74c3c</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #161b22;"></div>
+                        <div class="swatch-label">Panel BG<br>#161b22</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #2c3e50;"></div>
+                        <div class="swatch-label">Border<br>#2c3e50</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #4fc3f7;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #4fc3f7;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1e2a3a; color: #4fc3f7;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dracula Inspired -->
+        <div class="palette dracula">
+            <div class="palette-header">
+                <div class="palette-title">Dracula Inspired</div>
+                <div class="palette-description">Popular theme, vibrant purple focus, great readability</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f8f8f2;"></div>
+                        <div class="swatch-label">Primary Text<br>#f8f8f2</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #6272a4;"></div>
+                        <div class="swatch-label">Muted Text<br>#6272a4</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #bd93f9;"></div>
+                        <div class="swatch-label">Focus<br>#bd93f9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #6272a4;"></div>
+                        <div class="swatch-label">Selected<br>#6272a4</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #50fa7b;"></div>
+                        <div class="swatch-label">Success<br>#50fa7b</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff5555;"></div>
+                        <div class="swatch-label">Error<br>#ff5555</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #161b22;"></div>
+                        <div class="swatch-label">Panel BG<br>#161b22</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #44475a;"></div>
+                        <div class="swatch-label">Border<br>#44475a</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #bd93f9;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #bd93f9;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #2a2d3a; color: #bd93f9;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minimal Monochrome -->
+        <div class="palette monochrome">
+            <div class="palette-header">
+                <div class="palette-title">Minimal Monochrome</div>
+                <div class="palette-description">Ultra-minimal, distraction-free, pure focus on content</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Focus<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #808080;"></div>
+                        <div class="swatch-label">Select<br>#808080</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #cccccc;"></div>
+                        <div class="swatch-label">Success<br>#cccccc</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Error<br>#ffffff</div>
+                    </div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warm Terminal -->
+        <div class="palette warm-terminal">
+            <div class="palette-header">
+                <div class="palette-title">Warm Terminal</div>
+                <div class="palette-description">Retro computing feel, amber focus, comfortable for long use</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffb347;"></div>
+                        <div class="swatch-label">Focus<br>#ffb347</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #d2691e;"></div>
+                        <div class="swatch-label">Select<br>#d2691e</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #98d982;"></div>
+                        <div class="swatch-label">Success<br>#98d982</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff6b6b;"></div>
+                        <div class="swatch-label">Error<br>#ff6b6b</div>
+                    </div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nord Theme -->
+        <div class="palette nord">
+            <div class="palette-header">
+                <div class="palette-title">Nord Theme</div>
+                <div class="palette-description">Arctic, frost-inspired color palette, great for long coding sessions</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #d8dee9;"></div>
+                        <div class="swatch-label">Primary Text<br>#d8dee9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #eceff4;"></div>
+                        <div class="swatch-label">Bright Text<br>#eceff4</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4c566a;"></div>
+                        <div class="swatch-label">Muted Text<br>#4c566a</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #88c0d0;"></div>
+                        <div class="swatch-label">Focus<br>#88c0d0</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #5e81ac;"></div>
+                        <div class="swatch-label">Selected<br>#5e81ac</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #a3be8c;"></div>
+                        <div class="swatch-label">Success<br>#a3be8c</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #bf616a;"></div>
+                        <div class="swatch-label">Error<br>#bf616a</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #88c0d0;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #88c0d0;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #2e3440; color: #88c0d0;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solarized Dark -->
+        <div class="palette solarized">
+            <div class="palette-header">
+                <div class="palette-title">Solarized Dark</div>
+                <div class="palette-description">Precision colors for machines and people, scientifically designed</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #839496;"></div>
+                        <div class="swatch-label">Primary Text<br>#839496</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #fdf6e3;"></div>
+                        <div class="swatch-label">Bright Text<br>#fdf6e3</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #586e75;"></div>
+                        <div class="swatch-label">Muted Text<br>#586e75</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #268bd2;"></div>
+                        <div class="swatch-label">Focus<br>#268bd2</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #6c71c4;"></div>
+                        <div class="swatch-label">Selected<br>#6c71c4</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #859900;"></div>
+                        <div class="swatch-label">Success<br>#859900</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #dc322f;"></div>
+                        <div class="swatch-label">Error<br>#dc322f</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #268bd2;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #268bd2;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #073642; color: #268bd2;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gruvbox Dark -->
+        <div class="palette gruvbox">
+            <div class="palette-header">
+                <div class="palette-title">Gruvbox Dark</div>
+                <div class="palette-description">Retro groove color scheme, warm and comforting</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ebdbb2;"></div>
+                        <div class="swatch-label">Primary Text<br>#ebdbb2</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #fbf1c7;"></div>
+                        <div class="swatch-label">Bright Text<br>#fbf1c7</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #665c54;"></div>
+                        <div class="swatch-label">Muted Text<br>#665c54</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #fabd2f;"></div>
+                        <div class="swatch-label">Focus<br>#fabd2f</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #458588;"></div>
+                        <div class="swatch-label">Selected<br>#458588</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #98971a;"></div>
+                        <div class="swatch-label">Success<br>#98971a</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #cc241d;"></div>
+                        <div class="swatch-label">Error<br>#cc241d</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #fabd2f;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #fabd2f;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #3c3836; color: #fabd2f;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tokyo Night -->
+        <div class="palette tokyo-night">
+            <div class="palette-header">
+                <div class="palette-title">Tokyo Night</div>
+                <div class="palette-description">Clean, vibrant dark theme inspired by Tokyo's neon nights</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #c0caf5;"></div>
+                        <div class="swatch-label">Primary Text<br>#c0caf5</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #565f89;"></div>
+                        <div class="swatch-label">Muted Text<br>#565f89</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #7aa2f7;"></div>
+                        <div class="swatch-label">Focus<br>#7aa2f7</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #7c3aed;"></div>
+                        <div class="swatch-label">Selected<br>#7c3aed</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #9ece6a;"></div>
+                        <div class="swatch-label">Success<br>#9ece6a</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f7768e;"></div>
+                        <div class="swatch-label">Error<br>#f7768e</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #7aa2f7;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #7aa2f7;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1a1b26; color: #7aa2f7;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Light Professional (Different Background) -->
+        <div class="palette light-professional">
+            <div class="palette-header">
+                <div class="palette-title">Light Professional</div>
+                <div class="palette-description">Clean light theme for daytime work, high contrast</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #24292f;"></div>
+                        <div class="swatch-label">Primary Text<br>#24292f</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #000000;"></div>
+                        <div class="swatch-label">Bright Text<br>#000000</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #656d76;"></div>
+                        <div class="swatch-label">Muted Text<br>#656d76</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0366d6;"></div>
+                        <div class="swatch-label">Focus<br>#0366d6</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0366d6;"></div>
+                        <div class="swatch-label">Selected<br>#0366d6</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #28a745;"></div>
+                        <div class="swatch-label">Success<br>#28a745</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #d73a49;"></div>
+                        <div class="swatch-label">Error<br>#d73a49</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #ffffff; color: #0366d6; border-color: #d1d9e0;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #f6f8fa; color: #0366d6; border-color: #d1d9e0;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #e1f5fe; color: #0366d6; border-color: #d1d9e0;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sepia Terminal (Different Background) -->
+        <div class="palette sepia">
+            <div class="palette-header">
+                <div class="palette-title">Sepia Terminal</div>
+                <div class="palette-description">Vintage paper feel, easy on the eyes for extended reading</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #5d4037;"></div>
+                        <div class="swatch-label">Primary Text<br>#5d4037</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #3e2723;"></div>
+                        <div class="swatch-label">Bright Text<br>#3e2723</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #8d6e63;"></div>
+                        <div class="swatch-label">Muted Text<br>#8d6e63</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #8b4513;"></div>
+                        <div class="swatch-label">Focus<br>#8b4513</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #8b4513;"></div>
+                        <div class="swatch-label">Selected<br>#8b4513</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4caf50;"></div>
+                        <div class="swatch-label">Success<br>#4caf50</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #d32f2f;"></div>
+                        <div class="swatch-label">Error<br>#d32f2f</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #f4f1e8; color: #8b4513; border-color: #d4c5a9;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #ede6d3; color: #8b4513; border-color: #d4c5a9;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #e6dcc6; color: #8b4513; border-color: #d4c5a9;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Contrast Dark -->
+        <div class="palette high-contrast">
+            <div class="palette-header">
+                <div class="palette-title">High Contrast Dark</div>
+                <div class="palette-description">Maximum contrast for accessibility and visibility</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Primary Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #cccccc;"></div>
+                        <div class="swatch-label">Muted Text<br>#cccccc</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffff00;"></div>
+                        <div class="swatch-label">Focus<br>#ffff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ffff;"></div>
+                        <div class="swatch-label">Selected<br>#00ffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff00;"></div>
+                        <div class="swatch-label">Success<br>#00ff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff0000;"></div>
+                        <div class="swatch-label">Error<br>#ff0000</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #ffffff;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #000000; color: #ffffff;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #333333; color: #ffffff;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Soft Purple -->
+        <div class="palette soft-purple">
+            <div class="palette-header">
+                <div class="palette-title">Soft Purple</div>
+                <div class="palette-description">Gentle purple tones, relaxing and elegant</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e6e0ff;"></div>
+                        <div class="swatch-label">Primary Text<br>#e6e0ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #b19cd9;"></div>
+                        <div class="swatch-label">Muted Text<br>#b19cd9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #9c88ff;"></div>
+                        <div class="swatch-label">Focus<br>#9c88ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #6a5acd;"></div>
+                        <div class="swatch-label">Selected<br>#6a5acd</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #90ee90;"></div>
+                        <div class="swatch-label">Success<br>#90ee90</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff69b4;"></div>
+                        <div class="swatch-label">Error<br>#ff69b4</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #9c88ff;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #9c88ff;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #2a2040; color: #9c88ff;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forest Green -->
+        <div class="palette forest-green">
+            <div class="palette-header">
+                <div class="palette-title">Forest Green</div>
+                <div class="palette-description">Nature-inspired green theme, calming and focused</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #c8e6c9;"></div>
+                        <div class="swatch-label">Primary Text<br>#c8e6c9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #81c784;"></div>
+                        <div class="swatch-label">Muted Text<br>#81c784</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #7cb342;"></div>
+                        <div class="swatch-label">Focus<br>#7cb342</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4caf50;"></div>
+                        <div class="swatch-label">Selected<br>#4caf50</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #8bc34a;"></div>
+                        <div class="swatch-label">Success<br>#8bc34a</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f44336;"></div>
+                        <div class="swatch-label">Error<br>#f44336</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #7cb342;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #7cb342;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1b2e1b; color: #7cb342;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Midnight Blue (Different Background) -->
+        <div class="palette midnight-blue">
+            <div class="palette-header">
+                <div class="palette-title">Midnight Blue</div>
+                <div class="palette-description">Deep blue background, space-themed with bright accents</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e6f3ff;"></div>
+                        <div class="swatch-label">Primary Text<br>#e6f3ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #87ceeb;"></div>
+                        <div class="swatch-label">Muted Text<br>#87ceeb</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #1e90ff;"></div>
+                        <div class="swatch-label">Focus<br>#1e90ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4169e1;"></div>
+                        <div class="swatch-label">Selected<br>#4169e1</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #32cd32;"></div>
+                        <div class="swatch-label">Success<br>#32cd32</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff4500;"></div>
+                        <div class="swatch-label">Error<br>#ff4500</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #191970; color: #1e90ff; border-color: #2e2e5e;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #0f0f23; color: #1e90ff; border-color: #2e2e5e;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #1a1a40; color: #1e90ff; border-color: #2e2e5e;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Green (Different Background) -->
+        <div class="palette terminal-green">
+            <div class="palette-header">
+                <div class="palette-title">Terminal Green</div>
+                <div class="palette-description">Classic green-on-black terminal, retro computing nostalgia</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff00;"></div>
+                        <div class="swatch-label">Primary Text<br>#00ff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff00;"></div>
+                        <div class="swatch-label">Bright Text<br>#00ff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00cc00;"></div>
+                        <div class="swatch-label">Muted Text<br>#00cc00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff00;"></div>
+                        <div class="swatch-label">Focus<br>#00ff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00aa00;"></div>
+                        <div class="swatch-label">Selected<br>#00aa00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #00ff00;"></div>
+                        <div class="swatch-label">Success<br>#00ff00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff0000;"></div>
+                        <div class="swatch-label">Error<br>#ff0000</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #001100; color: #00ff00; border-color: #004400;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #002200; color: #00ff00; border-color: #004400;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #003300; color: #00ff00; border-color: #004400;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rose Gold (Different Background) -->
+        <div class="palette rose-gold">
+            <div class="palette-header">
+                <div class="palette-title">Rose Gold</div>
+                <div class="palette-description">Elegant pink and gold tones, sophisticated and warm</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #831843;"></div>
+                        <div class="swatch-label">Primary Text<br>#831843</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #000000;"></div>
+                        <div class="swatch-label">Bright Text<br>#000000</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #be185d;"></div>
+                        <div class="swatch-label">Muted Text<br>#be185d</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e91e63;"></div>
+                        <div class="swatch-label">Focus<br>#e91e63</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e91e63;"></div>
+                        <div class="swatch-label">Selected<br>#e91e63</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #10b981;"></div>
+                        <div class="swatch-label">Success<br>#10b981</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ef4444;"></div>
+                        <div class="swatch-label">Error<br>#ef4444</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #fdf2f8; color: #e91e63; border-color: #f3d1dc;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #fce7f3; color: #e91e63; border-color: #f3d1dc;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #fbcfe8; color: #e91e63; border-color: #f3d1dc;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Amber Terminal (Different Background) -->
+        <div class="palette amber-terminal">
+            <div class="palette-header">
+                <div class="palette-title">Amber Terminal</div>
+                <div class="palette-description">Rich amber background, vintage CRT monitor feel</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #fcd34d;"></div>
+                        <div class="swatch-label">Primary Text<br>#fcd34d</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f59e0b;"></div>
+                        <div class="swatch-label">Muted Text<br>#f59e0b</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #fbbf24;"></div>
+                        <div class="swatch-label">Focus<br>#fbbf24</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #d97706;"></div>
+                        <div class="swatch-label">Selected<br>#d97706</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #22c55e;"></div>
+                        <div class="swatch-label">Success<br>#22c55e</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #dc2626;"></div>
+                        <div class="swatch-label">Error<br>#dc2626</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #451a03; color: #fbbf24; border-color: #92400e;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #78350f; color: #fbbf24; border-color: #92400e;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #92400e; color: #fbbf24; border-color: #92400e;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ice Blue (Different Background) -->
+        <div class="palette ice-blue">
+            <div class="palette-header">
+                <div class="palette-title">Ice Blue</div>
+                <div class="palette-description">Cool cyan light theme, fresh and crisp</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0e7490;"></div>
+                        <div class="swatch-label">Primary Text<br>#0e7490</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #000000;"></div>
+                        <div class="swatch-label">Bright Text<br>#000000</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0891b2;"></div>
+                        <div class="swatch-label">Muted Text<br>#0891b2</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #67e8f9;"></div>
+                        <div class="swatch-label">Focus<br>#67e8f9</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #0891b2;"></div>
+                        <div class="swatch-label">Selected<br>#0891b2</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #10b981;"></div>
+                        <div class="swatch-label">Success<br>#10b981</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ef4444;"></div>
+                        <div class="swatch-label">Error<br>#ef4444</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #cffafe; color: #0891b2; border-color: #a5f3fc;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #ecfeff; color: #0891b2; border-color: #a5f3fc;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #67e8f9; color: #0891b2; border-color: #a5f3fc;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Neon Pink -->
+        <div class="palette neon-pink">
+            <div class="palette-header">
+                <div class="palette-title">Neon Pink</div>
+                <div class="palette-description">Electric pink accents, cyberpunk aesthetic with glow effects</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffb3ff;"></div>
+                        <div class="swatch-label">Primary Text<br>#ffb3ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff66ff;"></div>
+                        <div class="swatch-label">Muted Text<br>#ff66ff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff10f0;"></div>
+                        <div class="swatch-label">Focus<br>#ff10f0</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #c21292;"></div>
+                        <div class="swatch-label">Selected<br>#c21292</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #39ff14;"></div>
+                        <div class="swatch-label">Success<br>#39ff14</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff0040;"></div>
+                        <div class="swatch-label">Error<br>#ff0040</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #0d1117; color: #ff10f0;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #161b22; color: #ff10f0;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #2a1a2a; color: #ff10f0;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vintage Terminal (Different Background) -->
+        <div class="palette vintage-terminal">
+            <div class="palette-header">
+                <div class="palette-title">Vintage Terminal</div>
+                <div class="palette-description">Retro orange on dark brown, classic computing aesthetic</div>
+                <div class="color-swatches">
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffcc80;"></div>
+                        <div class="swatch-label">Primary Text<br>#ffcc80</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffffff;"></div>
+                        <div class="swatch-label">Bright Text<br>#ffffff</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ffab40;"></div>
+                        <div class="swatch-label">Muted Text<br>#ffab40</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #ff8c00;"></div>
+                        <div class="swatch-label">Focus<br>#ff8c00</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #e65100;"></div>
+                        <div class="swatch-label">Selected<br>#e65100</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #4caf50;"></div>
+                        <div class="swatch-label">Success<br>#4caf50</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="swatch-color" style="background: #f44336;"></div>
+                        <div class="swatch-label">Error<br>#f44336</div>
+                    </div>
+                </div>
+                <div class="background-demo">
+                    <div class="bg-demo-item" style="background: #2e1a00; color: #ff8c00; border-color: #5c3900;">Main BG</div>
+                    <div class="bg-demo-item" style="background: #3d2600; color: #ff8c00; border-color: #5c3900;">Panel BG</div>
+                    <div class="bg-demo-item" style="background: #4d3200; color: #ff8c00; border-color: #5c3900;">Hover BG</div>
+                </div>
+            </div>
+            <div class="palette-demo">
+                <div class="demo-section">
+                    <div class="demo-label">Widget States</div>
+                    <div class="demo-widgets">
+                        <div class="demo-widget normal">Normal Widget</div>
+                        <div class="demo-widget focused">Focused Widget (Tab navigation)</div>
+                        <div class="demo-widget selected">Selected Widget</div>
+                        <div class="demo-widget success">Success State</div>
+                        <div class="demo-widget error">Error State</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
