@@ -206,12 +206,28 @@ class ObjectList(Static):
         """Transform S3 objects into UI-friendly format with folder hierarchy."""
         ui_objects = []
         folders = set()
+        folder_sizes = {}
 
         # Add parent directory navigation if in a subfolder
         if self.current_prefix:
             ui_objects.append(self._create_parent_dir_object())
 
-        # Process each S3 object
+        # First pass: collect folder sizes
+        for s3_object in raw_objects:
+            key = s3_object["Key"]
+            relative_path = self._get_relative_path(key)
+
+            if not relative_path:
+                continue
+
+            if self._is_folder_path(relative_path):
+                folder_name = self._extract_folder_name(relative_path)
+                if folder_name not in folder_sizes:
+                    folder_sizes[folder_name] = 0
+                # Add the size of this object to the folder's total size
+                folder_sizes[folder_name] += s3_object.get("Size", 0)
+
+        # Second pass: create UI objects
         for s3_object in raw_objects:
             key = s3_object["Key"]
             relative_path = self._get_relative_path(key)
@@ -223,7 +239,8 @@ class ObjectList(Static):
                 folder_name = self._extract_folder_name(relative_path)
                 if folder_name not in folders:
                     folders.add(folder_name)
-                    ui_objects.append(self._create_folder_object(folder_name))
+                    folder_size = folder_sizes.get(folder_name, 0)
+                    ui_objects.append(self._create_folder_object(folder_name, folder_size))
             else:
                 ui_objects.append(self._create_file_object(relative_path, s3_object))
 
@@ -233,9 +250,15 @@ class ObjectList(Static):
         """Create the parent directory (..) object."""
         return {"key": PARENT_DIR_KEY, "is_folder": True, "size": "", "modified": "", "type": "dir"}
 
-    def _create_folder_object(self, folder_name: str) -> dict:
+    def _create_folder_object(self, folder_name: str, folder_size: int = 0) -> dict:
         """Create a folder object for the UI."""
-        return {"key": folder_name, "is_folder": True, "size": "", "modified": "", "type": "dir"}
+        return {
+            "key": folder_name,
+            "is_folder": True,
+            "size": format_file_size(folder_size) if folder_size > 0 else "",
+            "modified": "",
+            "type": "dir",
+        }
 
     def _create_file_object(self, filename: str, s3_object: dict) -> dict:
         """Create a file object for the UI."""
