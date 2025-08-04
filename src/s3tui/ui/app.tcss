@@ -197,7 +197,40 @@ BucketItem.-highlight .bucket-meta {
     color: $secondary;
 }
 
-/* ListView Selection States (consolidated) */
+/* ListView Selection States (consolidated) - Override for object list */
+ListView#object-list > ListItem.-active,
+ListView#object-list > ListItem:focus,
+ListView#object-list > ListItem.-cursor {
+    background: $accent !important;
+    color: $background !important;
+    border-left: solid $accent !important;
+}
+
+ListView#object-list > ListItem.-active .object-key,
+ListView#object-list > ListItem:focus .object-key,
+ListView#object-list > ListItem.-cursor .object-key {
+    color: $background !important;
+}
+
+ListView#object-list > ListItem.-active .object-extension,
+ListView#object-list > ListItem:focus .object-extension,
+ListView#object-list > ListItem.-cursor .object-extension {
+    color: $background !important;
+}
+
+ListView#object-list > ListItem.-active .object-modified,
+ListView#object-list > ListItem:focus .object-modified,
+ListView#object-list > ListItem.-cursor .object-modified {
+    color: $background !important;
+}
+
+ListView#object-list > ListItem.-active .object-size,
+ListView#object-list > ListItem:focus .object-size,
+ListView#object-list > ListItem.-cursor .object-size {
+    color: $background !important;
+}
+
+/* Original ListView Selection States (for bucket list) */
 ListView > ListItem.-active,
 ListView > ListItem:focus,
 ListView > ListItem.-cursor {
@@ -236,153 +269,6 @@ ListView > ListItem.-cursor .bucket-meta {
     width: 100%;
     padding: 0;
     margin: 0;
-}
-
-/* ====================================
- * OBJECT LIST WIDGET
- * ==================================== */
-ObjectList {
-    width: 1fr;
-    background: $background;
-    height: 100%;
-    min-width: 0;
-}
-
-#object-list-container {
-    width: 100%;
-    background: $background;
-    height: 100%;
-    layout: vertical;
-    margin: 0;
-    padding: 0;
-}
-
-/* ====================================
- * BREADCRUMB WIDGET
- * ==================================== */
-Breadcrumb {
-    height: 2;
-    padding: 0 1;
-    background: $background;
-    color: $foreground;
-    border-bottom: solid $primary 50%;
-    text-style: none;
-    content-align: left middle;
-}
-
-Breadcrumb:hover {
-    background: $surface;
-}
-
-#breadcrumb-bar {
-    dock: top;
-    height: 2;
-    min-height: 2;
-    background: $background;
-    border-bottom: solid $primary 50%;
-    padding: 0 1;
-    color: $foreground;
-    content-align: left middle;
-    margin: 0;
-    width: 100%;
-    visibility: visible;
-}
-
-/* ====================================
- * LOADING INDICATOR
- * ==================================== */
-#object-loading {
-    height: 100%;
-    width: 100%;
-    content-align: center middle;
-    background: $background;
-    color: $primary;
-    text-style: none;
-    display: none;
-}
-
-#object-table {
-    background: $background;
-    height: 1fr;
-    width: 100%;
-    scrollbar-background: $background;
-    scrollbar-color: $primary 50%;
-    scrollbar-color-hover: $primary;
-    scrollbar-size: 1 1;
-    border: none;
-    margin: 0;
-    padding: 0;
-}
-
-/* DataTable styling for object list */
-DataTable {
-    background: $background;
-    color: $foreground;
-    border: none;
-    height: 1fr;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    min-width: 100%;
-    overflow: auto;
-}
-
-DataTable > .datatable--header {
-    background: $background;
-    color: $secondary;
-    border-bottom: solid $primary 50%;
-    padding: 0 1;
-    height: auto;
-    min-height: 2;
-    width: 100%;
-}
-
-DataTable > .datatable--body {
-    width: 100%;
-    min-width: 100%;
-}
-
-DataTable > .datatable--header-hover {
-    background: $surface;
-}
-
-DataTable > .datatable--cursor {
-    background: $background;
-    color: $primary;
-    border-left: thick $primary;
-}
-
-DataTable > .datatable--cursor-hover {
-    background: $accent;
-    color: $background;
-    border-left: thick $background;
-}
-
-DataTable > .datatable--odd-row {
-    background: $background;
-}
-
-DataTable > .datatable--even-row {
-    background: $background;
-}
-
-DataTable > .datatable--hover {
-    background: $background;
-}
-
-/* Remove zebra stripes and focus on clean lines */
-DataTable .datatable--row {
-    border-left: thick transparent;
-}
-
-DataTable .datatable--row:hover {
-    background: $background;
-}
-
-DataTable .datatable--row.-cursor {
-    background: $background;
-    color: $primary;
-    border-left: thick $primary;
 }
 
 /* ====================================
@@ -886,3 +772,205 @@ HelpModal {
 }
 
 
+/* ====================================
+ * OBJECT LIST V2 STYLES (ListView-based)
+ * ==================================== */
+
+ObjectList {
+    width: 1fr;
+    background: $background;
+    height: 100%;
+    min-width: 0;
+}
+
+/* Object List Header Row */
+#object-list-header {
+    height: 2;
+    width: 100%;
+    border-bottom: solid $primary 50%;
+    margin: 0;
+}
+
+.object-name-header {
+    color: $foreground;
+    text-style: bold;
+    height: auto;
+    width: 60%;
+    padding-left: 2;
+    margin: 0;
+}
+
+.object-type-header {
+    color: $foreground;
+    text-style: bold;
+    height: auto;
+    width: 10%;
+    margin: 0;
+}
+
+.object-modified-header {
+    color: $foreground;
+    text-style: bold;
+    height: auto;
+    width: 20%;
+    margin: 0;
+}
+
+.object-size-header {
+    color: $foreground;
+    text-style: bold;
+    height: auto;
+    width: 10%;
+    padding: 0;
+    margin: 0;
+}
+
+/* Object List Container */
+#object-list {
+    background: $background;
+    scrollbar-background: $background;
+    scrollbar-color: $primary 50%;
+    scrollbar-color-hover: $primary;
+    scrollbar-size: 1 1;
+    height: 1fr;
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Object Item Component (ListView Item) */
+ObjectItem {
+    height: auto;
+    padding: 1 1;
+    border-left: solid transparent;
+    border-bottom: none;
+    background: $background;
+}
+
+ObjectItem:hover {
+    background: $surface;
+}
+
+ObjectItem > * {
+    background: transparent;
+}
+
+ObjectItem Horizontal {
+    height: auto;
+    min-height: 0;
+}
+
+/* Object Item Selection States - More specific selectors */
+ListView#object-list > ObjectItem.-active,
+ListView#object-list > ObjectItem:focus,
+ListView#object-list > ObjectItem.-cursor,
+ListView#object-list > ObjectItem.-highlight {
+    background: $accent !important;
+    color: $background !important;
+    border-left: solid $accent !important;
+}
+
+/* Also target ListItem directly since ObjectItem extends ListItem */
+ListView#object-list > ListItem.-active,
+ListView#object-list > ListItem:focus,
+ListView#object-list > ListItem.-cursor,
+ListView#object-list > ListItem.-highlight {
+    background: $accent !important;
+    color: $background !important;
+    border-left: solid $accent !important;
+}
+
+ListView#object-list > ObjectItem.-active .object-key,
+ListView#object-list > ObjectItem:focus .object-key,
+ListView#object-list > ObjectItem.-cursor .object-key,
+ListView#object-list > ObjectItem.-highlight .object-key,
+ListView#object-list > ListItem.-active .object-key,
+ListView#object-list > ListItem:focus .object-key,
+ListView#object-list > ListItem.-cursor .object-key,
+ListView#object-list > ListItem.-highlight .object-key {
+    color: $background !important;
+}
+
+ListView#object-list > ObjectItem.-active .object-extension,
+ListView#object-list > ObjectItem:focus .object-extension,
+ListView#object-list > ObjectItem.-cursor .object-extension,
+ListView#object-list > ObjectItem.-highlight .object-extension,
+ListView#object-list > ListItem.-active .object-extension,
+ListView#object-list > ListItem:focus .object-extension,
+ListView#object-list > ListItem.-cursor .object-extension,
+ListView#object-list > ListItem.-highlight .object-extension {
+    color: $background !important;
+}
+
+ListView#object-list > ObjectItem.-active .object-modified,
+ListView#object-list > ObjectItem:focus .object-modified,
+ListView#object-list > ObjectItem.-cursor .object-modified,
+ListView#object-list > ObjectItem.-highlight .object-modified,
+ListView#object-list > ListItem.-active .object-modified,
+ListView#object-list > ListItem:focus .object-modified,
+ListView#object-list > ListItem.-cursor .object-modified,
+ListView#object-list > ListItem.-highlight .object-modified {
+    color: $background !important;
+}
+
+ListView#object-list > ObjectItem.-active .object-size,
+ListView#object-list > ObjectItem:focus .object-size,
+ListView#object-list > ObjectItem.-cursor .object-size,
+ListView#object-list > ObjectItem.-highlight .object-size,
+ListView#object-list > ListItem.-active .object-size,
+ListView#object-list > ListItem:focus .object-size,
+ListView#object-list > ListItem.-cursor .object-size,
+ListView#object-list > ListItem.-highlight .object-size {
+    color: $background !important;
+}
+
+/* Object Item Text Elements */
+.object-key {
+    color: $foreground;
+    text-style: none;
+    height: auto;
+    width: 60%;
+    padding: 0 1 0 0;
+    margin: 0;
+}
+
+.object-extension {
+    color: $secondary;
+    text-style: none;
+    height: auto;
+    width: 10%;
+    padding: 0;
+    margin: 0;
+}
+
+.object-modified {
+    color: $secondary;
+    text-style: none;
+    height: auto;
+    width: 20%;
+    padding: 0;
+    margin: 0;
+}
+
+.object-size {
+    color: $secondary;
+    text-style: none;
+    height: auto;
+    width: 10%;
+    padding: 0;
+    margin: 0;
+}
+
+#breadcrumb-bar {
+    dock: top;
+    height: 2;
+    min-height: 2;
+    background: $background;
+    border-bottom: solid $primary 50%;
+    padding: 0 1;
+    color: $foreground;
+    content-align: left middle;
+    margin: 0;
+    width: 100%;
+    visibility: visible;
+}

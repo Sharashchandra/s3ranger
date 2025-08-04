@@ -2,7 +2,6 @@
 
 import os
 import threading
-from pathlib import Path
 
 from textual import work
 from textual.app import ComposeResult
@@ -175,9 +174,6 @@ class DownloadModal(ModalScreen[bool]):
     def _download_async(self, destination: str) -> None:
         """Asynchronously perform the download operation."""
         try:
-            # Create destination directory if it doesn't exist
-            Path(destination).mkdir(parents=True, exist_ok=True)
-
             # Perform the download
             if self.is_folder:
                 S3.download_directory(s3_uri=self.s3_path, local_dir_path=destination)

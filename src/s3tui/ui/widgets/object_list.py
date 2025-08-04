@@ -1,26 +1,73 @@
 import threading
+import time
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import DataTable, LoadingIndicator, Static
+from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3tui.gateways.s3 import S3
-
-from ..utils import format_file_size, format_folder_display_text
-from .breadcrumb import Breadcrumb
+from s3tui.ui.utils import format_file_size, format_folder_display_text
+from s3tui.ui.widgets.breadcrumb import Breadcrumb
 
 # Constants
 PARENT_DIR_KEY = ".."
 FILE_ICON = "📄"
-DEFAULT_TABLE_ROW_HEIGHT = 2
-TABLE_COLUMNS = ["Name", "Type", "Modified", "Size"]
+
+
+class ObjectItem(ListItem):
+    """Individual object item widget"""
+
+    def __init__(self, object_info: dict):
+        super().__init__()
+        self.object_info = self._extract_object_info(object_info)
+
+    def _extract_object_info(self, object_info: dict) -> dict:
+        """Extract relevant information from the object info dictionary."""
+        is_folder = object_info.get("is_folder", False)
+        key = object_info.get("key", "")
+
+        return {
+            "key": key,
+            "is_folder": is_folder,
+            "type": object_info.get("type", ""),
+            "modified": object_info.get("modified", ""),
+            "size": object_info.get("size", ""),
+        }
+
+    def _get_file_extension(self, filename: str) -> str:
+        """Extract file extension from filename."""
+        if not filename or "." not in filename:
+            return ""
+        return filename.split(".")[-1].lower()
+
+    def _format_object_name(self, name: str, is_folder: bool) -> str:
+        """Format object name with appropriate icon."""
+        if is_folder:
+            return format_folder_display_text(name)
+        return f"{FILE_ICON} {name}"
+
+    def compose(self) -> ComposeResult:
+        name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
+        with Horizontal():
+            yield Label(name_with_icon, classes="object-key")
+            yield Label(self.object_info["type"], classes="object-extension")
+            yield Label(self.object_info["modified"], classes="object-modified")
+            yield Label(self.object_info["size"], classes="object-size")
+
+    @property
+    def object_key(self) -> str:
+        return self.object_info["key"]
+
+    @property
+    def is_folder(self) -> bool:
+        return self.object_info["is_folder"]
 
 
 class ObjectList(Static):
-    """Widget for displaying S3 objects with navigation support."""
+    """Right panel widget displaying the contents of the selected S3 bucket."""
 
     BINDINGS = [
         Binding("d", "download", "Download"),
@@ -32,12 +79,10 @@ class ObjectList(Static):
     objects: list[dict] = reactive([])
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
-    selected_objects: set[int] = reactive(set())
     is_loading: bool = reactive(False)
 
     # Private cache for all bucket objects
     _all_objects: list[dict] = []
-    _table_mounted: bool = False
     _on_load_complete_callback: callable = None
 
     class ObjectSelected(Message):
@@ -49,55 +94,36 @@ class ObjectList(Static):
             self.is_folder = is_folder
 
     def compose(self) -> ComposeResult:
-        """Compose the widget layout."""
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
+            with Horizontal(id="object-list-header"):
+                yield Label("Name", classes="object-name-header")
+                yield Label("Type", classes="object-type-header")
+                yield Label("Modified", classes="object-modified-header")
+                yield Label("Size", classes="object-size-header")
             yield LoadingIndicator(id="object-loading")
+            yield ListView(id="object-list")
 
     def on_mount(self) -> None:
         """Initialize the widget when mounted."""
-        # Don't setup table immediately - wait for bucket selection
         pass
 
-    def _setup_table(self) -> None:
-        """Configure the data table columns and styling."""
-        table = self.query_one("#object-table", DataTable)
-        table.add_columns(*TABLE_COLUMNS)
-        table.cursor_type = "row"
-        table.zebra_stripes = False
+    # Event handlers
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle object selection"""
+        if isinstance(event.item, ObjectItem):
+            if event.item.is_folder:
+                self._handle_folder_selection(event.item.object_key)
+            else:
+                self._handle_file_selection(event.item.object_key)
 
-    def _ensure_table_mounted(self) -> None:
-        """Ensure the datatable is mounted and configured."""
-        if not self._table_mounted:
-            # Mount the datatable
-            container = self.query_one("#object-list-container", Vertical)
-            table = DataTable(id="object-table")
-            container.mount(table)
-            self._setup_table()
-            self._table_mounted = True
-
-    def _focus_first_row(self) -> None:
-        """Focus on the first row in the object table."""
-        try:
-            if not self._table_mounted:
-                return
-            table = self.query_one("#object-table", DataTable)
-            if table.row_count > 0:
-                table.focus()
-                table.move_cursor(row=0)
-        except Exception:
-            # Table not ready yet, silently ignore
-            pass
-
+    # Reactive watchers
     def watch_current_bucket(self, bucket_name: str) -> None:
         """React to bucket changes."""
         if bucket_name:
-            # Mount the datatable when a bucket is selected for the first time
-            self._ensure_table_mounted()
             self.current_prefix = ""
             self._update_breadcrumb()
             self._load_bucket_objects()
-            self._focus_first_row()
 
     def watch_current_prefix(self, prefix: str) -> None:
         """React to prefix changes."""
@@ -106,29 +132,21 @@ class ObjectList(Static):
 
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
-        self._update_table_display()
-        self._focus_first_row()
+        self._update_list_display()
+        # Focus the first item after updating the list
+        if objects:
+            self.call_later(self._focus_first_item)
 
     def watch_is_loading(self, is_loading: bool) -> None:
         """React to loading state changes."""
-        try:
-            loading_indicator = self.query_one("#object-loading", LoadingIndicator)
+        self._update_loading_state(is_loading)
 
-            if self._table_mounted:
-                table = self.query_one("#object-table", DataTable)
-                if is_loading:
-                    loading_indicator.display = True
-                    table.display = False
-                else:
-                    loading_indicator.display = False
-                    table.display = True
-            else:
-                # If table not mounted, just show/hide loading indicator
-                loading_indicator.display = is_loading
-        except Exception:
-            # Widgets not ready yet, silently ignore
-            pass
+    # Public methods
+    def set_bucket(self, bucket_name: str) -> None:
+        """Set the current bucket and load its objects."""
+        self.current_bucket = bucket_name
 
+    # Private methods
     def _update_breadcrumb(self) -> None:
         """Update the breadcrumb navigation display."""
         try:
@@ -136,6 +154,43 @@ class ObjectList(Static):
             breadcrumb.set_path(self.current_bucket, self.current_prefix)
         except Exception:
             # Breadcrumb not ready yet, silently ignore
+            pass
+
+    def _focus_first_item(self) -> None:
+        """Focus the first item in the list"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            if len(list_view.children) > 0:
+                # First, focus the list view itself
+                list_view.focus()
+                # Then set the index to ensure proper navigation
+                list_view.index = 0
+        except Exception:
+            pass
+
+    def _update_loading_state(self, is_loading: bool) -> None:
+        """Update UI elements based on loading state"""
+        try:
+            loading_indicator = self.query_one("#object-loading", LoadingIndicator)
+            list_view = self.query_one("#object-list", ListView)
+
+            if is_loading:
+                loading_indicator.display = True
+                list_view.display = False
+            else:
+                loading_indicator.display = False
+                list_view.display = True
+        except Exception:
+            pass
+
+    def _update_list_display(self) -> None:
+        """Update the object list display"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            list_view.clear()
+            for obj in self.objects:
+                list_view.append(ObjectItem(obj))
+        except Exception:
             pass
 
     def _load_bucket_objects(self) -> None:
@@ -154,10 +209,16 @@ class ObjectList(Static):
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
+            start_time = time.time()
             s3_uri = f"s3://{self.current_bucket}/"
             objects = S3.list_objects(s3_uri=s3_uri)
             # Update state on the main thread using call_later
             self.app.call_later(lambda: self._on_objects_loaded(objects))
+            end_time = time.time()
+            self.notify(
+                f"Loaded bucket '{self.current_bucket}' in {end_time - start_time:.2f} seconds",
+                severity="information",
+            )
         except Exception as e:
             # Handle S3 errors gracefully - capture exception in closure
             error = e
@@ -207,12 +268,13 @@ class ObjectList(Static):
         ui_objects = []
         folders = set()
         folder_sizes = {}
+        folder_modified_dates = {}
 
         # Add parent directory navigation if in a subfolder
         if self.current_prefix:
             ui_objects.append(self._create_parent_dir_object())
 
-        # First pass: collect folder sizes
+        # First pass: collect folder sizes and most recent modified dates
         for s3_object in raw_objects:
             key = s3_object["Key"]
             relative_path = self._get_relative_path(key)
@@ -224,8 +286,14 @@ class ObjectList(Static):
                 folder_name = self._extract_folder_name(relative_path)
                 if folder_name not in folder_sizes:
                     folder_sizes[folder_name] = 0
+                    folder_modified_dates[folder_name] = s3_object["LastModified"]
+
                 # Add the size of this object to the folder's total size
                 folder_sizes[folder_name] += s3_object.get("Size", 0)
+
+                # Keep track of the most recent modified date for the folder
+                if s3_object["LastModified"] > folder_modified_dates[folder_name]:
+                    folder_modified_dates[folder_name] = s3_object["LastModified"]
 
         # Second pass: create UI objects
         for s3_object in raw_objects:
@@ -240,7 +308,8 @@ class ObjectList(Static):
                 if folder_name not in folders:
                     folders.add(folder_name)
                     folder_size = folder_sizes.get(folder_name, 0)
-                    ui_objects.append(self._create_folder_object(folder_name, folder_size))
+                    folder_modified = folder_modified_dates.get(folder_name)
+                    ui_objects.append(self._create_folder_object(folder_name, folder_size, folder_modified))
             else:
                 ui_objects.append(self._create_file_object(relative_path, s3_object))
 
@@ -250,13 +319,17 @@ class ObjectList(Static):
         """Create the parent directory (..) object."""
         return {"key": PARENT_DIR_KEY, "is_folder": True, "size": "", "modified": "", "type": "dir"}
 
-    def _create_folder_object(self, folder_name: str, folder_size: int = 0) -> dict:
+    def _create_folder_object(self, folder_name: str, folder_size: int = 0, folder_modified=None) -> dict:
         """Create a folder object for the UI."""
+        modified_str = ""
+        if folder_modified:
+            modified_str = folder_modified.strftime("%Y-%m-%d %H:%M")
+
         return {
             "key": folder_name,
             "is_folder": True,
             "size": format_file_size(folder_size) if folder_size > 0 else "",
-            "modified": "",
+            "modified": modified_str,
             "type": "dir",
         }
 
@@ -284,47 +357,11 @@ class ObjectList(Static):
         """Extract the folder name from a path."""
         return path.split("/")[0]
 
-    def _update_table_display(self) -> None:
-        """Update the table with current objects."""
-        if not self._table_mounted:
-            return
-
-        table = self.query_one("#object-table", DataTable)
-        table.clear(columns=False)
-
-        for i, obj in enumerate(self.objects):
-            name_with_icon = self._format_object_name(obj["key"], obj["is_folder"])
-            table.add_row(
-                name_with_icon, obj["type"], obj["modified"], obj["size"], key=str(i), height=DEFAULT_TABLE_ROW_HEIGHT
-            )
-
-    def _format_object_name(self, name: str, is_folder: bool) -> str:
-        """Format object name with appropriate icon."""
-        if is_folder:
-            return format_folder_display_text(name)
-        return f"{FILE_ICON} {name}"
-
     def _get_file_extension(self, filename: str) -> str:
         """Extract file extension from filename."""
         if not filename or "." not in filename:
             return ""
         return filename.split(".")[-1].lower()
-
-    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Handle row selection in the data table."""
-        if event.row_key is None:
-            return
-
-        row_index = int(event.row_key.value)
-        if not (0 <= row_index < len(self.objects)):
-            return
-
-        selected_object = self.objects[row_index]
-
-        if selected_object["is_folder"]:
-            self._handle_folder_selection(selected_object["key"])
-        else:
-            self._handle_file_selection(selected_object["key"])
 
     def _handle_folder_selection(self, folder_key: str) -> None:
         """Handle folder selection and navigation."""
@@ -352,22 +389,17 @@ class ObjectList(Static):
         """Navigate into the specified folder."""
         self.current_prefix = f"{self.current_prefix}{folder_name}/"
 
-    def set_bucket(self, bucket_name: str) -> None:
-        """Set the current bucket and load its objects."""
-        self.current_bucket = bucket_name
-
+    # Utility methods
     def get_focused_object(self) -> dict | None:
-        """Get the currently focused object in the table."""
+        """Get the currently focused object in the list."""
         try:
-            if not self._table_mounted:
-                return None
-            table = self.query_one("#object-table", DataTable)
-            if table.cursor_row is None or not self.objects:
+            list_view = self.query_one("#object-list", ListView)
+            if list_view.index is None or not self.objects:
                 return None
 
-            cursor_row = table.cursor_row
-            if 0 <= cursor_row < len(self.objects):
-                return self.objects[cursor_row]
+            focused_index = list_view.index
+            if 0 <= focused_index < len(self.objects):
+                return self.objects[focused_index]
             return None
         except Exception:
             return None
@@ -412,32 +444,18 @@ class ObjectList(Static):
         self._on_load_complete_callback = on_complete
         self._load_bucket_objects()
 
-    def focus(self) -> None:
-        """Override focus to only focus the table if it's mounted."""
-        if self._table_mounted:
-            try:
-                table = self.query_one("#object-table", DataTable)
-                table.focus()
-            except Exception:
-                # Table not ready, focus the widget itself
-                super().focus()
-        else:
-            # If table not mounted, focus the widget itself
+    def focus_list(self) -> None:
+        """Focus the object list view"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            if len(list_view.children) > 0:
+                list_view.focus()
+                list_view.index = 0
+        except Exception:
+            # List not ready, focus the widget itself
             super().focus()
 
-    def focus_table(self) -> None:
-        """Focus the object table if it's available"""
-        if self._table_mounted:
-            try:
-                table = self.query_one("#object-table", DataTable)
-                table.focus()
-            except Exception:
-                # Table not ready, focus the widget itself
-                super().focus()
-        else:
-            # If table not mounted, focus the widget itself
-            super().focus()
-
+    # Action methods
     def action_download(self) -> None:
         """Download selected items"""
         # Get the currently focused object
@@ -460,7 +478,7 @@ class ObjectList(Static):
                 # Download was successful, refresh the view if needed
                 self.refresh_objects()
             # Always restore focus to the object list after modal closes
-            self.call_later(self.focus_table)
+            self.call_later(self.focus_list)
 
         self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
@@ -486,7 +504,7 @@ class ObjectList(Static):
                 # Upload was successful, refresh the view
                 self.refresh_objects()
             # Always restore focus to the object list after modal closes
-            self.call_later(self.focus_table)
+            self.call_later(self.focus_list)
 
         self.app.push_screen(UploadModal(upload_destination, False), on_upload_result)
 
@@ -512,6 +530,6 @@ class ObjectList(Static):
                 # Delete was successful, refresh the view
                 self.refresh_objects()
             # Always restore focus to the object list after modal closes
-            self.call_later(self.focus_table)
+            self.call_later(self.focus_list)
 
         self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
