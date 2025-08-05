@@ -17,30 +17,18 @@ FILE_ICON = "📄"
 
 
 class ObjectItem(ListItem):
-    """Individual object item widget"""
+    """Individual item in the object list representing a file or folder."""
 
     def __init__(self, object_info: dict):
         super().__init__()
-        self.object_info = self._extract_object_info(object_info)
-
-    def _extract_object_info(self, object_info: dict) -> dict:
-        """Extract relevant information from the object info dictionary."""
-        is_folder = object_info.get("is_folder", False)
-        key = object_info.get("key", "")
-
-        return {
-            "key": key,
-            "is_folder": is_folder,
+        # Extract only the fields we need
+        self.object_info = {
+            "key": object_info.get("key", ""),
+            "is_folder": object_info.get("is_folder", False),
             "type": object_info.get("type", ""),
             "modified": object_info.get("modified", ""),
             "size": object_info.get("size", ""),
         }
-
-    def _get_file_extension(self, filename: str) -> str:
-        """Extract file extension from filename."""
-        if not filename or "." not in filename:
-            return ""
-        return filename.split(".")[-1].lower()
 
     def _format_object_name(self, name: str, is_folder: bool) -> str:
         """Format object name with appropriate icon."""
@@ -49,6 +37,7 @@ class ObjectItem(ListItem):
         return f"{FILE_ICON} {name}"
 
     def compose(self) -> ComposeResult:
+        """Render the object item with its properties in columns."""
         name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
         with Horizontal():
             yield Label(name_with_icon, classes="object-key")
@@ -58,10 +47,12 @@ class ObjectItem(ListItem):
 
     @property
     def object_key(self) -> str:
+        """The key (name) of this object."""
         return self.object_info["key"]
 
     @property
     def is_folder(self) -> bool:
+        """Whether this object is a folder."""
         return self.object_info["is_folder"]
 
 
@@ -120,9 +111,7 @@ class ObjectList(Static):
     def watch_current_bucket(self, bucket_name: str) -> None:
         """React to bucket changes."""
         if bucket_name:
-            # Clear selection first to prevent highlight flashing
             self._clear_selection()
-            # Set loading state to prevent UI flash
             self.is_loading = True
             self.current_prefix = ""
             self._update_breadcrumb()
@@ -136,7 +125,7 @@ class ObjectList(Static):
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
         self._update_list_display()
-        # Note: Focus is now handled in _update_loading_state and _on_objects_loaded
+        # Focus is handled in _on_objects_loaded
 
     def watch_is_loading(self, is_loading: bool) -> None:
         """React to loading state changes."""
@@ -158,59 +147,77 @@ class ObjectList(Static):
             pass
 
     def _focus_first_item(self) -> None:
-        """Focus the first item in the list"""
+        """Focus the first item in the list."""
+        try:
+            # First just make sure the list view is visible
+            list_view = self.query_one("#object-list", ListView)
+            list_view.display = True
+
+            # Use a slightly longer delay for the actual focus operation
+            # This gives the UI time to fully render, especially with many objects
+            self.set_timer(0.1, self._apply_focus)
+        except Exception:
+            # Fall back to focusing the widget itself
+            self.focus()
+
+    def _apply_focus(self) -> None:
+        """Apply focus to the list view after it's fully rendered."""
         try:
             list_view = self.query_one("#object-list", ListView)
             if len(list_view.children) > 0:
-                # Make sure the list view is visible
-                list_view.display = True
-                # Focus the list view itself
                 list_view.focus()
-                # Set the index to select the first item
                 list_view.index = 0
-                # Request another focus call to ensure it sticks
-                self.set_timer(0.1, self._ensure_focus)
+                # Schedule another follow-up focus with additional delay
+                self.set_timer(0.2, self._ensure_focus)
         except Exception:
-            # If we can't focus the list, at least focus the widget itself
-            self.focus()
+            pass
 
     def _ensure_focus(self) -> None:
-        """Ensure focus is maintained on the list view"""
+        """Final focus check to ensure the list view maintains focus."""
         try:
             list_view = self.query_one("#object-list", ListView)
             if list_view.display and len(list_view.children) > 0:
-                # Focus the list view again to ensure it keeps focus
-                list_view.focus()
+                # Check if we're already the focused widget
+                app_focus = self.app.focused
+                if app_focus != list_view:
+                    # If not, explicitly set focus again
+                    list_view.focus()
+
+                # Always ensure an item is selected
                 if list_view.index is None:
                     list_view.index = 0
         except Exception:
             pass
 
     def _update_loading_state(self, is_loading: bool) -> None:
-        """Update UI elements based on loading state"""
+        """Toggle loading indicator and list view visibility based on loading state."""
         try:
             loading_indicator = self.query_one("#object-loading", LoadingIndicator)
             list_view = self.query_one("#object-list", ListView)
 
             if is_loading:
-                loading_indicator.display = True
+                # When starting to load, immediately hide the list and show the loader
                 list_view.display = False
+                loading_indicator.display = True
             else:
+                # When finishing loading, first hide the loader
                 loading_indicator.display = False
+                # Then show the list view (the actual focus will be handled separately)
                 list_view.display = True
-                # Don't set focus here - we'll handle it in _on_objects_loaded
-                # with proper timing
         except Exception:
             pass
 
     def _update_list_display(self) -> None:
-        """Update the object list display"""
+        """Populate the list view with object items."""
         try:
             list_view = self.query_one("#object-list", ListView)
             list_view.clear()
+
+            # Add all objects to the list view
             for obj in self.objects:
                 list_view.append(ObjectItem(obj))
         except Exception:
+            # Silent failure if list view isn't ready yet
             pass
 
     def _load_bucket_objects(self) -> None:
@@ -219,67 +226,65 @@ class ObjectList(Static):
             self._clear_objects()
             return
 
-        # Note: is_loading should be set before calling this method
-        # to prevent UI flash when navigating
-
-        # Use threading to load objects asynchronously
+        # Start asynchronous loading
         thread = threading.Thread(target=self._load_objects_async, daemon=True)
         thread.start()
 
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
-            # Use the new list_objects_for_prefix method with current prefix
             objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
-            # Update state on the main thread using call_later
             self.app.call_later(lambda: self._on_objects_loaded(objects))
-        except Exception as e:
-            # Handle S3 errors gracefully - capture exception in closure
-            error = e
-            self.app.call_later(lambda: self._on_objects_error(error))
+        except Exception as error:
+            # Capture the error explicitly in the closure
+            def report_error(err=error):
+                self._on_objects_error(err)
+
+            self.app.call_later(report_error)
 
     def _on_objects_loaded(self, objects: dict) -> None:
         """Handle successful objects loading."""
         self._all_objects = objects
         self._filter_objects_by_prefix()
+
+        # Calculate delay based on number of objects (more objects = longer delay)
+        obj_count = len(self.objects)
+        focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
+
+        # First stop loading
         self.is_loading = False
 
-        # Focus the first item in the list after loading with a slight delay
-        # to ensure the UI has fully updated
-        self.set_timer(0.05, self._focus_first_item)
+        # Then schedule focus with a calculated delay based on object count
+        self.set_timer(focus_delay, self._focus_first_item)
 
-        # Call the completion callback if one was provided
-        if self._on_load_complete_callback:
-            callback = self._on_load_complete_callback
-            self._on_load_complete_callback = None  # Clear the callback
-            callback()
+        self._execute_completion_callback()
 
     def _on_objects_error(self, error: Exception) -> None:
         """Handle objects loading error."""
         self._clear_objects()
         self.is_loading = False
-        # Optionally show an error message
         self.notify(f"Error loading bucket objects: {error}", severity="error")
 
-        # Call the completion callback even on error
+        self._execute_completion_callback()
+
+    def _execute_completion_callback(self) -> None:
+        """Execute and clear the completion callback if one exists."""
         if self._on_load_complete_callback:
             callback = self._on_load_complete_callback
-            self._on_load_complete_callback = None  # Clear the callback
+            self._on_load_complete_callback = None
             callback()
 
     def _clear_objects(self) -> None:
-        """Clear all object data."""
+        """Reset object state when no data is available."""
         self._all_objects = {}
         self.objects = []
         self.is_loading = False
 
     def _clear_selection(self) -> None:
-        """Clear the current selection in the list view to prevent highlighting flashes."""
+        """Clear list selection and hide the list view during navigation."""
         try:
             list_view = self.query_one("#object-list", ListView)
-            # Reset the index to clear selection
             list_view.index = None
-            # Make sure the list isn't visible during navigation
             list_view.display = False
         except Exception:
             # ListView might not be available yet, silently ignore
@@ -367,33 +372,27 @@ class ObjectList(Static):
         if not self.current_prefix:
             return
 
-        # Clear selection first to prevent highlight flashing
-        self._clear_selection()
+        self._prepare_for_navigation()
 
-        # Set loading state to prevent UI flash
-        self.is_loading = True
-
+        # Calculate parent directory path
         path_parts = self.current_prefix.rstrip("/").split("/")
         if len(path_parts) > 1:
             self.current_prefix = "/".join(path_parts[:-1]) + "/"
         else:
             self.current_prefix = ""
 
-        # Reload objects for the new prefix
         self._load_bucket_objects()
 
     def _navigate_into_folder(self, folder_name: str) -> None:
         """Navigate into the specified folder."""
-        # Clear selection first to prevent highlight flashing
-        self._clear_selection()
-
-        # Set loading state to prevent UI flash
-        self.is_loading = True
-
+        self._prepare_for_navigation()
         self.current_prefix = f"{self.current_prefix}{folder_name}/"
-
-        # Reload objects for the new prefix
         self._load_bucket_objects()
+
+    def _prepare_for_navigation(self) -> None:
+        """Prepare UI for folder navigation."""
+        self._clear_selection()
+        self.is_loading = True
 
     # Utility methods
     def get_focused_object(self) -> dict | None:
@@ -448,21 +447,12 @@ class ObjectList(Static):
             on_complete: Optional callback to call when loading is complete
         """
         self._on_load_complete_callback = on_complete
-        # Clear selection first to prevent highlight flashing
-        self._clear_selection()
-        self.is_loading = True
+        self._prepare_for_navigation()  # Reuse navigation preparation logic
         self._load_bucket_objects()
 
     def focus_list(self) -> None:
-        """Focus the object list view"""
-        try:
-            list_view = self.query_one("#object-list", ListView)
-            if len(list_view.children) > 0:
-                list_view.focus()
-                list_view.index = 0
-        except Exception:
-            # List not ready, focus the widget itself
-            super().focus()
+        """Focus the object list view."""
+        self._focus_first_item()  # Reuse focus logic
 
     # Action methods
     def action_download(self) -> None:
