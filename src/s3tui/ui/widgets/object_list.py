@@ -1,5 +1,4 @@
 import threading
-import time
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -81,8 +80,8 @@ class ObjectList(Static):
     current_prefix: str = reactive("")
     is_loading: bool = reactive(False)
 
-    # Private cache for all bucket objects
-    _all_objects: list[dict] = []
+    # Private cache for current level objects
+    _all_objects: dict = {}
     _on_load_complete_callback: callable = None
 
     class ObjectSelected(Message):
@@ -121,6 +120,10 @@ class ObjectList(Static):
     def watch_current_bucket(self, bucket_name: str) -> None:
         """React to bucket changes."""
         if bucket_name:
+            # Clear selection first to prevent highlight flashing
+            self._clear_selection()
+            # Set loading state to prevent UI flash
+            self.is_loading = True
             self.current_prefix = ""
             self._update_breadcrumb()
             self._load_bucket_objects()
@@ -128,14 +131,12 @@ class ObjectList(Static):
     def watch_current_prefix(self, prefix: str) -> None:
         """React to prefix changes."""
         self._update_breadcrumb()
-        self._filter_objects_by_prefix()
+        # Objects will be loaded by navigation methods
 
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
         self._update_list_display()
-        # Focus the first item after updating the list
-        if objects:
-            self.call_later(self._focus_first_item)
+        # Note: Focus is now handled in _update_loading_state and _on_objects_loaded
 
     def watch_is_loading(self, is_loading: bool) -> None:
         """React to loading state changes."""
@@ -161,10 +162,27 @@ class ObjectList(Static):
         try:
             list_view = self.query_one("#object-list", ListView)
             if len(list_view.children) > 0:
-                # First, focus the list view itself
+                # Make sure the list view is visible
+                list_view.display = True
+                # Focus the list view itself
                 list_view.focus()
-                # Then set the index to ensure proper navigation
+                # Set the index to select the first item
                 list_view.index = 0
+                # Request another focus call to ensure it sticks
+                self.set_timer(0.1, self._ensure_focus)
+        except Exception:
+            # If we can't focus the list, at least focus the widget itself
+            self.focus()
+
+    def _ensure_focus(self) -> None:
+        """Ensure focus is maintained on the list view"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            if list_view.display and len(list_view.children) > 0:
+                # Focus the list view again to ensure it keeps focus
+                list_view.focus()
+                if list_view.index is None:
+                    list_view.index = 0
         except Exception:
             pass
 
@@ -180,6 +198,8 @@ class ObjectList(Static):
             else:
                 loading_indicator.display = False
                 list_view.display = True
+                # Don't set focus here - we'll handle it in _on_objects_loaded
+                # with proper timing
         except Exception:
             pass
 
@@ -194,13 +214,13 @@ class ObjectList(Static):
             pass
 
     def _load_bucket_objects(self) -> None:
-        """Load all objects from the current S3 bucket."""
+        """Load objects from the current S3 bucket prefix."""
         if not self.current_bucket:
             self._clear_objects()
             return
 
-        # Start loading
-        self.is_loading = True
+        # Note: is_loading should be set before calling this method
+        # to prevent UI flash when navigating
 
         # Use threading to load objects asynchronously
         thread = threading.Thread(target=self._load_objects_async, daemon=True)
@@ -209,26 +229,24 @@ class ObjectList(Static):
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
-            start_time = time.time()
-            s3_uri = f"s3://{self.current_bucket}/"
-            objects = S3.list_objects(s3_uri=s3_uri)
+            # Use the new list_objects_for_prefix method with current prefix
+            objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
             # Update state on the main thread using call_later
             self.app.call_later(lambda: self._on_objects_loaded(objects))
-            end_time = time.time()
-            self.notify(
-                f"Loaded bucket '{self.current_bucket}' in {end_time - start_time:.2f} seconds",
-                severity="information",
-            )
         except Exception as e:
             # Handle S3 errors gracefully - capture exception in closure
             error = e
             self.app.call_later(lambda: self._on_objects_error(error))
 
-    def _on_objects_loaded(self, objects: list[dict]) -> None:
+    def _on_objects_loaded(self, objects: dict) -> None:
         """Handle successful objects loading."""
         self._all_objects = objects
         self._filter_objects_by_prefix()
         self.is_loading = False
+
+        # Focus the first item in the list after loading with a slight delay
+        # to ensure the UI has fully updated
+        self.set_timer(0.05, self._focus_first_item)
 
         # Call the completion callback if one was provided
         if self._on_load_complete_callback:
@@ -251,9 +269,21 @@ class ObjectList(Static):
 
     def _clear_objects(self) -> None:
         """Clear all object data."""
-        self._all_objects = []
+        self._all_objects = {}
         self.objects = []
         self.is_loading = False
+
+    def _clear_selection(self) -> None:
+        """Clear the current selection in the list view to prevent highlighting flashes."""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            # Reset the index to clear selection
+            list_view.index = None
+            # Make sure the list isn't visible during navigation
+            list_view.display = False
+        except Exception:
+            # ListView might not be available yet, silently ignore
+            pass
 
     def _filter_objects_by_prefix(self) -> None:
         """Filter cached objects to show only those matching the current prefix."""
@@ -263,55 +293,31 @@ class ObjectList(Static):
 
         self.objects = self._build_ui_objects(self._all_objects)
 
-    def _build_ui_objects(self, raw_objects: list[dict]) -> list[dict]:
-        """Transform S3 objects into UI-friendly format with folder hierarchy."""
+    def _build_ui_objects(self, s3_response: dict) -> list[dict]:
+        """Transform S3 response into UI-friendly format."""
         ui_objects = []
-        folders = set()
-        folder_sizes = {}
-        folder_modified_dates = {}
 
         # Add parent directory navigation if in a subfolder
         if self.current_prefix:
             ui_objects.append(self._create_parent_dir_object())
 
-        # First pass: collect folder sizes and most recent modified dates
-        for s3_object in raw_objects:
+        # Add folders from the response
+        folders = s3_response.get("folders", [])
+        for folder in folders:
+            prefix = folder["Prefix"]
+            # Extract folder name by removing the current prefix and trailing slash
+            folder_name = prefix[len(self.current_prefix) :].rstrip("/")
+            if folder_name:  # Only add if we get a valid folder name
+                ui_objects.append(self._create_folder_object(folder_name))
+
+        # Add files from the response
+        files = s3_response.get("files", [])
+        for s3_object in files:
             key = s3_object["Key"]
-            relative_path = self._get_relative_path(key)
-
-            if not relative_path:
-                continue
-
-            if self._is_folder_path(relative_path):
-                folder_name = self._extract_folder_name(relative_path)
-                if folder_name not in folder_sizes:
-                    folder_sizes[folder_name] = 0
-                    folder_modified_dates[folder_name] = s3_object["LastModified"]
-
-                # Add the size of this object to the folder's total size
-                folder_sizes[folder_name] += s3_object.get("Size", 0)
-
-                # Keep track of the most recent modified date for the folder
-                if s3_object["LastModified"] > folder_modified_dates[folder_name]:
-                    folder_modified_dates[folder_name] = s3_object["LastModified"]
-
-        # Second pass: create UI objects
-        for s3_object in raw_objects:
-            key = s3_object["Key"]
-            relative_path = self._get_relative_path(key)
-
-            if not relative_path:
-                continue
-
-            if self._is_folder_path(relative_path):
-                folder_name = self._extract_folder_name(relative_path)
-                if folder_name not in folders:
-                    folders.add(folder_name)
-                    folder_size = folder_sizes.get(folder_name, 0)
-                    folder_modified = folder_modified_dates.get(folder_name)
-                    ui_objects.append(self._create_folder_object(folder_name, folder_size, folder_modified))
-            else:
-                ui_objects.append(self._create_file_object(relative_path, s3_object))
+            # Extract filename by removing the current prefix
+            filename = key[len(self.current_prefix) :]
+            if filename:  # Only add if we get a valid filename
+                ui_objects.append(self._create_file_object(filename, s3_object))
 
         return ui_objects
 
@@ -319,17 +325,13 @@ class ObjectList(Static):
         """Create the parent directory (..) object."""
         return {"key": PARENT_DIR_KEY, "is_folder": True, "size": "", "modified": "", "type": "dir"}
 
-    def _create_folder_object(self, folder_name: str, folder_size: int = 0, folder_modified=None) -> dict:
+    def _create_folder_object(self, folder_name: str) -> dict:
         """Create a folder object for the UI."""
-        modified_str = ""
-        if folder_modified:
-            modified_str = folder_modified.strftime("%Y-%m-%d %H:%M")
-
         return {
             "key": folder_name,
             "is_folder": True,
-            "size": format_file_size(folder_size) if folder_size > 0 else "",
-            "modified": modified_str,
+            "size": "",  # No size for folders since we don't fetch all files
+            "modified": "",  # No modified date since we don't fetch folder metadata
             "type": "dir",
         }
 
@@ -342,20 +344,6 @@ class ObjectList(Static):
             "modified": s3_object["LastModified"].strftime("%Y-%m-%d %H:%M"),
             "type": self._get_file_extension(filename),
         }
-
-    def _get_relative_path(self, key: str) -> str:
-        """Get the relative path from the current prefix."""
-        if self.current_prefix and not key.startswith(self.current_prefix):
-            return ""
-        return key[len(self.current_prefix) :] if self.current_prefix else key
-
-    def _is_folder_path(self, path: str) -> bool:
-        """Check if the path represents a folder (contains subdirectories)."""
-        return "/" in path
-
-    def _extract_folder_name(self, path: str) -> str:
-        """Extract the folder name from a path."""
-        return path.split("/")[0]
 
     def _get_file_extension(self, filename: str) -> str:
         """Extract file extension from filename."""
@@ -379,15 +367,33 @@ class ObjectList(Static):
         if not self.current_prefix:
             return
 
+        # Clear selection first to prevent highlight flashing
+        self._clear_selection()
+
+        # Set loading state to prevent UI flash
+        self.is_loading = True
+
         path_parts = self.current_prefix.rstrip("/").split("/")
         if len(path_parts) > 1:
             self.current_prefix = "/".join(path_parts[:-1]) + "/"
         else:
             self.current_prefix = ""
 
+        # Reload objects for the new prefix
+        self._load_bucket_objects()
+
     def _navigate_into_folder(self, folder_name: str) -> None:
         """Navigate into the specified folder."""
+        # Clear selection first to prevent highlight flashing
+        self._clear_selection()
+
+        # Set loading state to prevent UI flash
+        self.is_loading = True
+
         self.current_prefix = f"{self.current_prefix}{folder_name}/"
+
+        # Reload objects for the new prefix
+        self._load_bucket_objects()
 
     # Utility methods
     def get_focused_object(self) -> dict | None:
@@ -442,6 +448,9 @@ class ObjectList(Static):
             on_complete: Optional callback to call when loading is complete
         """
         self._on_load_complete_callback = on_complete
+        # Clear selection first to prevent highlight flashing
+        self._clear_selection()
+        self.is_loading = True
         self._load_bucket_objects()
 
     def focus_list(self) -> None:
