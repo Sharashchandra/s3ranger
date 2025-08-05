@@ -170,6 +170,24 @@ class S3:
 
         return objects
 
+    @get_client
+    @resolve_s3_uri
+    @staticmethod
+    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> list[dict]:
+        """List objects in a bucket for a specific prefix."""
+        paginator = client.get_paginator("list_objects_v2")
+        response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "", Delimiter="/")
+
+        print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}'")
+        objects = {}
+        for response in response_iterator:
+            if "Contents" in response:
+                objects["files"] = response["Contents"]
+            if "CommonPrefixes" in response:
+                objects["folders"] = response["CommonPrefixes"]
+
+        return objects
+
     # -------------------------Upload------------------------- #
 
     @get_client
