@@ -2,7 +2,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import DataTable, Footer, ListView
+from textual.widgets import Footer, ListView
 
 from s3tui.ui.modals.help_modal import HelpModal
 from s3tui.ui.widgets.bucket_list import BucketList
@@ -14,10 +14,9 @@ class MainScreen(Screen):
     """Main screen displaying S3 buckets and objects."""
 
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
         Binding("tab", "switch_panel", "Switch Panel"),
-        Binding("r", "refresh", "Refresh"),
-        Binding("h", "help", "Help"),
+        Binding("ctrl+r", "refresh", "Refresh"),
+        Binding("ctrl+h", "help", "Help"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -54,11 +53,11 @@ class MainScreen(Screen):
         # Try to find the focusable components within each widget
         try:
             bucket_list_view = bucket_list.query_one("#bucket-list-view", ListView)
-            object_table = object_list.query_one("#object-table", DataTable)
+            object_list_view = object_list.query_one("#object-list", ListView)
 
             # Check which component currently has focus
             if bucket_list_view.has_focus:
-                object_table.focus()
+                object_list_view.focus()
             else:
                 bucket_list_view.focus()
         except Exception:
@@ -77,11 +76,11 @@ class MainScreen(Screen):
         focused_widget = None
         try:
             bucket_list_view = bucket_list.query_one("#bucket-list-view", ListView)
-            object_table = object_list.query_one("#object-table", DataTable)
+            object_list_view = object_list.query_one("#object-list", ListView)
 
             if bucket_list_view.has_focus:
                 focused_widget = "bucket_list"
-            elif object_table.has_focus:
+            elif object_list_view.has_focus:
                 focused_widget = "object_list"
         except Exception:
             # Fallback to widget-level focus check
@@ -102,8 +101,11 @@ class MainScreen(Screen):
         if focused_widget == "object_list":
             # Refresh the object list
             object_list.refresh_objects(on_complete=on_refresh_complete)
+        elif focused_widget == "bucket_list":
+            # Refresh the bucket list
+            bucket_list.load_buckets(on_complete=on_refresh_complete)
         else:
-            # Default to refreshing bucket list
+            # Default to refreshing bucket list if no focus was detected
             bucket_list.load_buckets(on_complete=on_refresh_complete)
 
     def _restore_focus_after_refresh(self, focused_widget: str) -> None:
@@ -121,8 +123,8 @@ class MainScreen(Screen):
                 # Use the dedicated method to restore focus to bucket list
                 bucket_list.focus_list_view()
             elif focused_widget == "object_list":
-                # Use the dedicated method to restore focus to object table
-                object_list.focus_table()
+                # Use the dedicated method to restore focus to object list
+                object_list.focus_list()
         except Exception:
             # Fallback to widget-level focus
             if focused_widget == "bucket_list":

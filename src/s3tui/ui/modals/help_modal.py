@@ -54,10 +54,10 @@ class HelpModal(ModalScreen[bool]):
                 with Vertical(classes="help-section"):
                     yield Label("General Controls", classes="help-section-title")
                     with Container(classes="help-keybindings"):
-                        yield self._create_keybinding_row("r", "Refresh current view")
+                        yield self._create_keybinding_row("Ctrl+r", "Refresh current view")
                         yield self._create_keybinding_row("Ctrl+f", "Focus filter input (bucket list)")
-                        yield self._create_keybinding_row("h", "Show this help dialog")
-                        yield self._create_keybinding_row("q", "Quit application")
+                        yield self._create_keybinding_row("Ctrl+h", "Show this help dialog")
+                        yield self._create_keybinding_row("Ctrl+q", "Quit application")
 
                 # Modal controls section
                 with Vertical(classes="help-section"):

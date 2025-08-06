@@ -14,9 +14,7 @@ class S3TUI(App):
     CSS_PATH = "app.tcss"
 
     BINDINGS = [
-        Binding("q", "quit", "Quit", priority=True),
-        Binding("h", "help", "Help"),
-        Binding("r", "refresh", "Refresh"),
+        Binding("ctrl+q", "quit", "Quit", priority=True),
     ]
 
     def __init__(
