@@ -6,9 +6,10 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, LoadingIndicator, Static
+from textual.widgets import Button, Label, Static
 
 from s3tui.gateways.s3 import S3
+from s3tui.ui.widgets import ProgressWidget
 
 
 class DeleteModal(ModalScreen[bool]):
@@ -38,8 +39,8 @@ class DeleteModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
         with Container(id="delete-dialog"):
-            # Loading indicator (hidden by default)
-            yield LoadingIndicator(id="delete-loading")
+            # Progress widget (hidden by default)
+            yield ProgressWidget(text="Deleting...", id="progress-indicator")
 
             # Dialog header
             with Container(id="delete-dialog-header"):
@@ -85,24 +86,23 @@ class DeleteModal(ModalScreen[bool]):
             print("DEBUG: No s3_path provided")
         source_field.refresh()
 
-
     def watch_is_deleting(self, is_deleting: bool) -> None:
         """React to deleting state changes."""
         try:
-            loading_indicator = self.query_one("#delete-loading", LoadingIndicator)
+            progress_widget = self.query_one("#progress-indicator", ProgressWidget)
             dialog_header = self.query_one("#delete-dialog-header", Container)
             dialog_content = self.query_one("#delete-dialog-content", Container)
             dialog_footer = self.query_one("#delete-dialog-footer", Container)
 
             if is_deleting:
-                # Show loading indicator and hide other content
-                loading_indicator.display = True
+                # Show progress widget and hide other content
+                progress_widget.display = True
                 dialog_header.display = False
                 dialog_content.display = False
                 dialog_footer.display = False
             else:
-                # Hide loading indicator and show other content
-                loading_indicator.display = False
+                # Hide progress widget and show other content
+                progress_widget.display = False
                 dialog_header.display = True
                 dialog_content.display = True
                 dialog_footer.display = True
