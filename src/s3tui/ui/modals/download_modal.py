@@ -8,10 +8,11 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, LoadingIndicator, Static
+from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import FileOpen, SelectDirectory
 
 from s3tui.gateways.s3 import S3
+from s3tui.ui.widgets import ProgressWidget
 
 FILE_PICKER_DEFAULT_PATH = "~/Downloads/"
 
@@ -45,8 +46,8 @@ class DownloadModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
         with Container(id="download-dialog"):
-            # Loading indicator (hidden by default)
-            yield LoadingIndicator(id="download-loading")
+            # Progress widget (hidden by default)
+            yield ProgressWidget(text="Downloading...", id="progress-indicator")
 
             # Dialog header
             with Container(id="download-dialog-header"):
@@ -111,20 +112,20 @@ class DownloadModal(ModalScreen[bool]):
     def watch_is_downloading(self, is_downloading: bool) -> None:
         """React to downloading state changes."""
         try:
-            loading_indicator = self.query_one("#download-loading", LoadingIndicator)
+            progress_widget = self.query_one("#progress-indicator", ProgressWidget)
             dialog_header = self.query_one("#download-dialog-header", Container)
             dialog_content = self.query_one("#download-dialog-content", Container)
             dialog_footer = self.query_one("#download-dialog-footer", Container)
 
             if is_downloading:
-                # Show loading indicator and hide other content
-                loading_indicator.display = True
+                # Show progress widget and hide other content
+                progress_widget.display = True
                 dialog_header.display = False
                 dialog_content.display = False
                 dialog_footer.display = False
             else:
-                # Hide loading indicator and show other content
-                loading_indicator.display = False
+                # Hide progress widget and show other content
+                progress_widget.display = False
                 dialog_header.display = True
                 dialog_content.display = True
                 dialog_footer.display = True

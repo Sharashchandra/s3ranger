@@ -292,15 +292,63 @@ DownloadModal {
     border: solid $primary;
 }
 
-/* Download loading indicator */
-#download-loading {
+/* Progress widget */
+#progress-indicator {
     height: 100%;
     width: 100%;
     content-align: center middle;
+    align: center middle;
     background: $background;
     color: $primary;
     text-style: none;
     display: none;
+    padding: 2 4;
+}
+
+.progress-container {
+    content-align: center middle;
+    align: center middle;
+    height: 100%;
+    width: 100%;
+}
+
+.progress-text {
+    text-align: center;
+    color: $primary;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+.progress-bar {
+    text-align: center;
+    color: $accent;
+    background: $surface;
+    height: 3;
+    width: 50%;
+    border: solid $accent;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+#custom-progress-bar {
+    text-align: center;
+    color: $accent;
+    background: $surface;
+    height: 3;
+    width: 50%;
+    border: solid $accent;
+    padding: 0 1;
+    margin-top: 1;
+    content-align: center middle;
+    align: center middle;
+}
+
+.progress-bar-container {
+    content-align: center middle;
+    align: center middle;
+    width: 100%;
+    height: auto;
 }
 
 /* Dialog header */
