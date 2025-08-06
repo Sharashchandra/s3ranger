@@ -733,7 +733,7 @@ DeleteModal {
 /* Modal overlay */
 HelpModal {
     align: center middle;
-    background: rgba(13, 17, 23, 0.8);
+    background: #000000 70%;
 }
 
 /* Main dialog container */
@@ -742,8 +742,8 @@ HelpModal {
     max-width: 100;
     height: auto;
     max-height: 90%;
-    background: #161b22;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary;
     padding: 0;
     overflow-y: auto;
 }
@@ -752,8 +752,8 @@ HelpModal {
 #help-dialog-header {
     dock: top;
     height: auto;
-    background: #21262d;
-    border-bottom: solid #30363d;
+    background: $surface;
+    border-bottom: solid $primary 50%;
     padding: 1 2;
 }
 
@@ -766,7 +766,7 @@ HelpModal {
 }
 
 #help-dialog-content:focus {
-    border: solid #58a6ff;
+    border: solid $primary;
 }
 
 /* Help sections */
@@ -776,13 +776,13 @@ HelpModal {
 }
 
 .help-section-title {
-    color: #58a6ff;
+    color: $primary;
     text-style: bold;
     margin-bottom: 1;
 }
 
 .help-text {
-    color: #c9d1d9;
+    color: $foreground;
     margin-bottom: 1;
 }
 
@@ -803,10 +803,10 @@ HelpModal {
 .help-keybinding-key {
     width: 15;
     height: 3;
-    color: #ffd700;
+    color: $accent;
     text-style: bold;
-    background: #0d1117;
-    border: solid #30363d;
+    background: $background;
+    border: solid $primary 50%;
     padding: 0 1;
     content-align: center middle;
     margin-right: 2;
@@ -815,7 +815,7 @@ HelpModal {
 .help-keybinding-desc {
     width: 1fr;
     height: 3;
-    color: #c9d1d9;
+    color: $foreground;
     content-align: left middle;
 }
 
