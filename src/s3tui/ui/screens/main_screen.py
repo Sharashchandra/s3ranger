@@ -14,10 +14,9 @@ class MainScreen(Screen):
     """Main screen displaying S3 buckets and objects."""
 
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
         Binding("tab", "switch_panel", "Switch Panel"),
-        Binding("r", "refresh", "Refresh"),
-        Binding("h", "help", "Help"),
+        Binding("ctrl+r", "refresh", "Refresh"),
+        Binding("ctrl+h", "help", "Help"),
     ]
 
     def compose(self) -> ComposeResult:
