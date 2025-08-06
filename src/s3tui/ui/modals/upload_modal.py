@@ -9,10 +9,11 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, LoadingIndicator, Static
+from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import FileOpen, SelectDirectory
 
 from s3tui.gateways.s3 import S3
+from s3tui.ui.widgets import ProgressWidget
 
 FILE_PICKER_DEFAULT_PATH = "~/"
 
@@ -47,8 +48,8 @@ class UploadModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
         with Container(id="upload-dialog"):
-            # Loading indicator (hidden by default)
-            yield LoadingIndicator(id="upload-loading")
+            # Progress widget (hidden by default)
+            yield ProgressWidget(text="Uploading...", id="progress-indicator")
 
             # Dialog header
             with Container(id="upload-dialog-header"):
@@ -61,13 +62,9 @@ class UploadModal(ModalScreen[bool]):
                 with Vertical(classes="field-group"):
                     yield Label("Source", classes="field-label")
                     with Horizontal(classes="input-with-button"):
-                        yield Input(
-                            value="~/", placeholder="Enter local source path...", id="source-input"
-                        )
+                        yield Input(value="~/", placeholder="Enter local source path...", id="source-input")
                         yield Button("📁", id="file-picker-btn", classes="file-picker-button")
-                    yield Label(
-                        "Local path to upload from (~ expands to home directory)", classes="field-help"
-                    )
+                    yield Label("Local path to upload from (~ expands to home directory)", classes="field-help")
 
                 # Destination field (read-only S3 path)
                 with Vertical(classes="field-group"):
@@ -115,20 +112,20 @@ class UploadModal(ModalScreen[bool]):
     def watch_is_uploading(self, is_uploading: bool) -> None:
         """React to uploading state changes."""
         try:
-            loading_indicator = self.query_one("#upload-loading", LoadingIndicator)
+            progress_widget = self.query_one("#progress-indicator", ProgressWidget)
             dialog_header = self.query_one("#upload-dialog-header", Container)
             dialog_content = self.query_one("#upload-dialog-content", Container)
             dialog_footer = self.query_one("#upload-dialog-footer", Container)
 
             if is_uploading:
-                # Show loading indicator and hide other content
-                loading_indicator.display = True
+                # Show progress widget and hide other content
+                progress_widget.display = True
                 dialog_header.display = False
                 dialog_content.display = False
                 dialog_footer.display = False
             else:
-                # Hide loading indicator and show other content
-                loading_indicator.display = False
+                # Hide progress widget and show other content
+                progress_widget.display = False
                 dialog_header.display = True
                 dialog_content.display = True
                 dialog_footer.display = True
@@ -185,7 +182,7 @@ class UploadModal(ModalScreen[bool]):
         """Asynchronously perform the upload operation."""
         try:
             source_path = Path(source)
-            
+
             # Perform the upload
             if source_path.is_dir():
                 S3.upload_directory(local_dir_path=source, s3_uri=self.s3_path)
@@ -226,7 +223,7 @@ class UploadModal(ModalScreen[bool]):
             source_input.value = path_str
             source_input.cursor_position = len(path_str)
             source_input.focus()
-    
+
     @work
     async def action_folder_picker(self) -> None:
         """Open folder picker to select directories."""
