@@ -25,6 +25,7 @@ class S3TUI(App):
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
         aws_session_token: str = None,
+        theme: str = "Github Dark",
         **kwargs,
     ):
         """Initialize the S3TUI app.
@@ -36,6 +37,7 @@ class S3TUI(App):
             aws_access_key_id: AWS access key ID for authentication.
             aws_secret_access_key: AWS secret access key for authentication.
             aws_session_token: AWS session token for temporary credentials.
+            theme: Theme name to use for the UI.
         """
         super().__init__(**kwargs)
         self.endpoint_url = endpoint_url
@@ -44,6 +46,7 @@ class S3TUI(App):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
         self.aws_session_token = aws_session_token
+        self.selected_theme = theme
         self.current_theme_index = 0
 
         # Set the endpoint URL, region, profile, and credentials globally for the S3 class
@@ -81,5 +84,5 @@ class S3TUI(App):
         self.register_custom_themes()
 
         # Set initial theme
-        self.theme = "Github Dark"
+        self.theme = self.selected_theme
         self.push_screen(MainScreen())
