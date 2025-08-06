@@ -19,12 +19,14 @@ from s3tui.ui.app import S3TUI
     type=str,
     help="AWS region name (required when using custom endpoint-url)",
     default=None,
+    envvar="AWS_DEFAULT_REGION",
 )
 @click.option(
     "--profile-name",
     type=str,
     help="AWS profile name to use for authentication",
     default=None,
+    envvar="AWS_PROFILE",
 )
 @click.option(
     "--aws-access-key-id",
