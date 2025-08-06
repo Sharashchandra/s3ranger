@@ -852,7 +852,7 @@ wheels = [
 [[package]]
 name = "s3tui"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "awscli" },
     { name = "boto3" },
