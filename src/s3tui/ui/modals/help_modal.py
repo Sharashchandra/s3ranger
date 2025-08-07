@@ -49,6 +49,7 @@ class HelpModal(ModalScreen[bool]):
                         yield self._create_keybinding_row("d", "Download selected file/folder")
                         yield self._create_keybinding_row("u", "Upload file to current location")
                         yield self._create_keybinding_row("Delete", "Delete selected file/folder")
+                        yield self._create_keybinding_row("Ctrl+k", "Rename selected file/folder")
 
                 # General controls section
                 with Vertical(classes="help-section"):

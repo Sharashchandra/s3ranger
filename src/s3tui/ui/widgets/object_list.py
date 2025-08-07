@@ -63,6 +63,7 @@ class ObjectList(Static):
         Binding("d", "download", "Download"),
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
+        Binding("ctrl+k", "rename_item", "Rename"),
     ]
 
     # Reactive properties
@@ -532,3 +533,34 @@ class ObjectList(Static):
             self.call_later(self.focus_list)
 
         self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
+
+    def action_rename_item(self) -> None:
+        """Rename selected item"""
+        # Get the currently focused object
+        s3_uri = self.get_s3_uri_for_focused_object()
+        focused_obj = self.get_focused_object()
+
+        if not s3_uri or not focused_obj:
+            self.notify("No object selected for renaming", severity="error")
+            return
+
+        # Don't allow renaming of parent directory entry
+        if focused_obj.get("key") == "..":
+            self.notify("Cannot rename parent directory entry", severity="error")
+            return
+
+        # Determine if it's a folder or file
+        is_folder = focused_obj.get("is_folder", False)
+
+        # Import here to avoid circular imports
+        from s3tui.ui.modals.rename_modal import RenameModal
+
+        # Show the rename modal
+        def on_rename_result(result: bool) -> None:
+            if result:
+                # Rename was successful, refresh the view
+                self.refresh_objects()
+            # Always restore focus to the object list after modal closes
+            self.call_later(self.focus_list)
+
+        self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)

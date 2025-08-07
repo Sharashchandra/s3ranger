@@ -361,14 +361,18 @@ DownloadModal {
 }
 
 .dialog-title {
-    color: $foreground;
-    text-style: none;
+    color: $primary;
+    text-style: bold;
+    content-align: center middle;
     margin-bottom: 1;
+    width: 100%;
 }
 
 .dialog-subtitle {
     color: $secondary;
     text-style: none;
+    content-align: center middle;
+    width: 100%;
 }
 
 /* Dialog content */
@@ -724,6 +728,77 @@ DeleteModal {
     background: $error;
     border: solid $error;
     color: $background;
+}
+
+/* ====================================
+ * RENAME MODAL STYLES
+ * ==================================== */
+
+/* Modal overlay */
+RenameModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+/* Main dialog container */
+#rename-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 25;
+    max-height: 50;
+    background: $background;
+    border: solid $primary;
+}
+
+/* Dialog header */
+#rename-dialog-header {
+    height: auto;
+    width: 100%;
+    background: $surface;
+    border-bottom: solid $primary 50%;
+    padding: 1;
+}
+
+/* Warning text for folder rename */
+.warning-text {
+    color: $warning;
+    text-style: italic;
+    margin-top: 1;
+    width: 100%;
+    content-align: center middle;
+}
+
+/* Dialog content */
+#rename-dialog-content {
+    padding: 1 2;
+    height: auto;
+    width: 100%;
+}
+
+/* Rename input field */
+.rename-input {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+/* Current name field in rename modal - reduced padding */
+#current-name-field {
+    padding: 0 2;
+    height: auto;
+    min-height: 3;
+}
+
+/* Dialog footer */
+#rename-dialog-footer {
+    height: auto;
+    min-height: 6;
+    width: 100%;
+    background: $surface;
+    border-top: solid $primary 50%;
+    padding: 1;
+    layout: horizontal;
+    content-align: left middle;
 }
 
 /* ====================================

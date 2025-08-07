@@ -373,3 +373,57 @@ class S3:
             if "Contents" in response:
                 objects_to_delete = [{"Key": obj["Key"]} for obj in response["Contents"]]
                 client.delete_objects(Bucket=bucket_name, Delete={"Objects": objects_to_delete})
+
+    # -------------------------Move------------------------- #
+
+    @get_client
+    @staticmethod
+    def move_file(
+        client: boto3.client,
+        *,
+        source_s3_bucket: str,
+        source_s3_key: str,
+        destination_s3_bucket: str,
+        destination_s3_key: str,
+    ):
+        """Move a file from one S3 location to another."""
+        print(
+            f"Moving file from s3://{source_s3_bucket}/{source_s3_key} to s3://{destination_s3_bucket}/{destination_s3_key}"
+        )
+        client.copy_object(
+            Bucket=destination_s3_bucket,
+            CopySource={"Bucket": source_s3_bucket, "Key": source_s3_key},
+            Key=destination_s3_key,
+        )
+        client.delete_object(Bucket=source_s3_bucket, Key=source_s3_key)
+
+    @get_client
+    @staticmethod
+    def move_directory(
+        client: boto3.client,
+        *,
+        source_s3_bucket: str,
+        source_s3_prefix: str,
+        destination_s3_bucket: str,
+        destination_s3_prefix: str,
+    ):
+        """Move a directory from one S3 location to another."""
+        print(
+            f"Moving directory from s3://{source_s3_bucket}/{source_s3_prefix} to s3://{destination_s3_bucket}/{destination_s3_prefix}"
+        )
+
+        cli_driver = create_clidriver()
+        args = [
+            "s3",
+            "mv",
+            f"s3://{source_s3_bucket}/{source_s3_prefix}",
+            f"s3://{destination_s3_bucket}/{destination_s3_prefix}",
+            "--recursive",
+        ]
+        if S3._endpoint_url:
+            args.extend(["--endpoint-url", S3._endpoint_url])
+        if S3._region_name:
+            args.extend(["--region", S3._region_name])
+        if S3._profile_name:
+            args.extend(["--profile", S3._profile_name])
+        cli_driver.main(args)
