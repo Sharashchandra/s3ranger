@@ -11,6 +11,7 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 - ⬆️ **Upload files and directories** to S3
 - ⬇️ **Download files and directories** from S3
 - 🗑️ **Delete objects and folders** with confirmation prompts
+- ✏️ **Rename files and folders** with conflict detection
 - 🔍 **Filter and search** through buckets
 - 🎨 **Multiple themes** (GitHub Dark, Dracula, Solarized, Sepia)
 - ⚙️ **Flexible configuration** via CLI arguments, config files, or environment variables
@@ -125,6 +126,7 @@ s3tui configure
 | `U` | Upload file/folder |
 | `D` | Download selected item |
 | `Delete` | Delete selected item |
+| `Ctrl+K` | Rename selected item |
 | `F1` | Help |
 
 ### Working with S3-Compatible Services
