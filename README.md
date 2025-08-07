@@ -131,26 +131,11 @@ s3tui configure
 
 ### Working with S3-Compatible Services
 
-s3tui works with any S3-compatible service. Here are some examples:
+s3tui works with any S3-compatible service:
 
 #### LocalStack
 ```bash
 s3tui --endpoint-url http://localhost:4566 --region-name us-east-1
-```
-
-#### MinIO
-```bash
-s3tui --endpoint-url http://localhost:9000 --region-name us-east-1
-```
-
-#### DigitalOcean Spaces
-```bash
-s3tui --endpoint-url https://nyc3.digitaloceanspaces.com --region-name nyc3
-```
-
-#### Backblaze B2
-```bash
-s3tui --endpoint-url https://s3.us-west-002.backblazeb2.com --region-name us-west-002
 ```
 
 ## Configuration
