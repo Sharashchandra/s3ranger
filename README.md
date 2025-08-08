@@ -2,7 +2,11 @@
 
 A terminal-based user interface for browsing and managing AWS S3 buckets and objects. Built with Python and [Textual](https://textual.textualize.io/), s3tui provides an intuitive way to interact with S3 storage directly from your terminal.
 
-![s3tui Screenshot](docs/main_screen.png)
+![s3tui Screenshot](pics/main_screen.png)
+![s3tui Screenshot](pics/download.png)
+![s3tui Screenshot](pics/upload.png)
+![s3tui Screenshot](pics/delete.png)
+![s3tui Screenshot](pics/rename.png)
 
 ## Features
 

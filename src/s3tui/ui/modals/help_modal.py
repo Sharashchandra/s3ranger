@@ -76,8 +76,8 @@ class HelpModal(ModalScreen[bool]):
                     yield Static(
                         "• Use ~ in paths to refer to your home directory\n"
                         "• Folders are indicated with a trailing slash (/)\n"
-                        "• Use Ctrl+C to interrupt long-running operations\n"
-                        "• The status bar shows connection info and current path",
+                        "• The status bar shows connection info and current path\n"
+                        "• On Mac: Use fn+Delete to delete a file (instead of just Delete)",
                         classes="help-text",
                     )
 
