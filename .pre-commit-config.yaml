@@ -1,0 +1,27 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  # Generic pre commit hooks
+  rev: 'v5.0.0'
+  hooks:
+    - id: check-merge-conflict
+    - id: detect-private-key
+    - id: detect-aws-credentials
+      args: ["--allow-missing-credentials"]
+    - id: no-commit-to-branch
+      # Branch to prevent direct commits to
+      args: ["--branch", "main", "--branch", "develop"]
+    - id: debug-statements
+    - id: end-of-file-fixer
+    - id: pretty-format-json
+      args: ["--autofix"]
+      exclude: "^.vscode/"
+
+- repo: https://github.com/charliermarsh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.12.8
+  hooks:
+    # Run the linter.
+    - id: ruff
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
