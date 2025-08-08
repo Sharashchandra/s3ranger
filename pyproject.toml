@@ -45,6 +45,7 @@ build-backend = "hatchling.build"
 dev = [
     "ipdb>=0.13.13",
     "ipython>=9.4.0",
+    "pre-commit>=4.2.0",
     "ruff>=0.12.7",
     "textual-dev>=1.7.0",
 ]
