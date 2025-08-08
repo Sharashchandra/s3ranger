@@ -1,10 +1,10 @@
 import os
+import subprocess
 from collections import namedtuple
 from functools import wraps
 from urllib.parse import urlparse
 
 import boto3
-from awscli.clidriver import create_clidriver
 
 
 class S3:
@@ -66,6 +66,51 @@ class S3:
         cls._aws_access_key_id = aws_access_key_id
         cls._aws_secret_access_key = aws_secret_access_key
         cls._aws_session_token = aws_session_token
+
+    @classmethod
+    def _run_aws_cli_command(cls, command_args: list[str]) -> str:
+        """Run an AWS CLI command with proper error handling.
+
+        Args:
+            command_args: List of command arguments (without 'aws' prefix)
+
+        Returns:
+            The command output as a string
+
+        Raises:
+            RuntimeError: If the command fails with non-zero exit code
+        """
+        # Build the environment variables
+        env = os.environ.copy()
+
+        # Set credentials in environment if provided and not using profile
+        if cls._aws_access_key_id and not cls._profile_name:
+            env["AWS_ACCESS_KEY_ID"] = cls._aws_access_key_id
+        if cls._aws_secret_access_key and not cls._profile_name:
+            env["AWS_SECRET_ACCESS_KEY"] = cls._aws_secret_access_key
+        if cls._aws_session_token and not cls._profile_name:
+            env["AWS_SESSION_TOKEN"] = cls._aws_session_token
+
+        # Build the full command
+        command = ["aws", *command_args]
+
+        # Add endpoint URL if specified
+        if cls._endpoint_url:
+            command.extend(["--endpoint-url", cls._endpoint_url])
+
+        # Add region if specified
+        if cls._region_name:
+            command.extend(["--region", cls._region_name])
+
+        # Add profile if specified
+        if cls._profile_name:
+            command.extend(["--profile", cls._profile_name])
+
+        try:
+            result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(e.stderr)
 
     @staticmethod
     def resolve_s3_location(s3_path):
@@ -213,15 +258,17 @@ class S3:
         print(f"Uploading folder: {local_dir_path} to s3://{bucket_name}/{prefix}")
         folder_name = os.path.basename(local_dir_path)
 
-        cli_driver = create_clidriver()
-        args = ["s3", "cp", local_dir_path, f"s3://{bucket_name}/{prefix or ''}{folder_name}", "--recursive"]
-        if S3._endpoint_url:
-            args.extend(["--endpoint-url", S3._endpoint_url])
-        if S3._region_name:
-            args.extend(["--region", S3._region_name])
-        if S3._profile_name:
-            args.extend(["--profile", S3._profile_name])
-        cli_driver.main(args)
+        # Build AWS CLI command arguments
+        command_args = [
+            "s3",
+            "cp",
+            local_dir_path,
+            f"s3://{bucket_name}/{prefix or ''}{folder_name}",
+            "--recursive",
+        ]
+
+        # Run the command with error handling
+        S3._run_aws_cli_command(command_args)
 
     @get_client
     @resolve_s3_uri
@@ -286,15 +333,11 @@ class S3:
 
         print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
 
-        cli_driver = create_clidriver()
-        args = ["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"]
-        if S3._endpoint_url:
-            args.extend(["--endpoint-url", S3._endpoint_url])
-        if S3._region_name:
-            args.extend(["--region", S3._region_name])
-        if S3._profile_name:
-            args.extend(["--profile", S3._profile_name])
-        cli_driver.main(args)
+        # Build AWS CLI command arguments
+        command_args = ["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"]
+
+        # Run the command with error handling
+        S3._run_aws_cli_command(command_args)
 
     @get_client
     @resolve_s3_uri
@@ -345,15 +388,12 @@ class S3:
     def delete_directory(*, bucket_name: str, prefix: str = None) -> None:
         """Delete a directory from S3."""
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
-        cli_driver = create_clidriver()
-        args = ["s3", "rm", f"s3://{bucket_name}/{prefix or ''}", "--recursive"]
-        if S3._endpoint_url:
-            args.extend(["--endpoint-url", S3._endpoint_url])
-        if S3._region_name:
-            args.extend(["--region", S3._region_name])
-        if S3._profile_name:
-            args.extend(["--profile", S3._profile_name])
-        cli_driver.main(args)
+
+        # Build AWS CLI command arguments
+        command_args = ["s3", "rm", f"s3://{bucket_name}/{prefix or ''}", "--recursive"]
+
+        # Run the command with error handling
+        S3._run_aws_cli_command(command_args)
 
     @get_client
     @resolve_s3_uri
@@ -412,18 +452,14 @@ class S3:
             f"Moving directory from s3://{source_s3_bucket}/{source_s3_prefix} to s3://{destination_s3_bucket}/{destination_s3_prefix}"
         )
 
-        cli_driver = create_clidriver()
-        args = [
+        # Build AWS CLI command arguments
+        command_args = [
             "s3",
             "mv",
             f"s3://{source_s3_bucket}/{source_s3_prefix}",
             f"s3://{destination_s3_bucket}/{destination_s3_prefix}",
             "--recursive",
         ]
-        if S3._endpoint_url:
-            args.extend(["--endpoint-url", S3._endpoint_url])
-        if S3._region_name:
-            args.extend(["--region", S3._region_name])
-        if S3._profile_name:
-            args.extend(["--profile", S3._profile_name])
-        cli_driver.main(args)
+
+        # Run the command with error handling
+        S3._run_aws_cli_command(command_args)

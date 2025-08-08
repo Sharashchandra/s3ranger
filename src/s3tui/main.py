@@ -1,10 +1,168 @@
+"""
+S3TUI - S3 Terminal User Interface
+
+This module provides the main CLI entry point for S3TUI, a terminal-based interface
+for browsing and managing S3 buckets and objects. It includes configuration management
+and interactive setup capabilities.
+"""
+
 from pathlib import Path
+from typing import Any, Dict
 
 import click
 
 from s3tui import __version__
 from s3tui.config import CONFIG_FILE_PATH, load_config, merge_config_with_cli_args
 from s3tui.ui.app import S3TUI
+
+# Constants
+THEME_CHOICES = ["Github Dark", "Dracula", "Solarized", "Sepia"]
+DEFAULT_THEME = "Github Dark"
+
+
+def _load_existing_config(config_path: Path) -> Dict[str, Any]:
+    """Load existing configuration from file if it exists."""
+    if not config_path.exists():
+        return {}
+
+    try:
+        import toml
+
+        with open(config_path, "r") as f:
+            config = toml.load(f)
+        click.echo(f"Found existing configuration at {config_path}")
+        click.echo()
+        return config
+    except Exception:
+        return {}
+
+
+def _prompt_for_value(prompt_text: str, current_value: str = "", hide_input: bool = False) -> str:
+    """Helper function to prompt for a configuration value."""
+    return click.prompt(
+        prompt_text, default=current_value, show_default=bool(current_value), hide_input=hide_input, type=str
+    ).strip()
+
+
+def _configure_s3_settings(existing_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Configure S3-related settings."""
+    click.echo("S3 Configuration:")
+    click.echo("-" * 16)
+
+    config = {}
+
+    # Endpoint URL
+    current = existing_config.get("endpoint_url", "")
+    endpoint_url = _prompt_for_value("Endpoint URL (for S3-compatible services like MinIO)", current)
+    if endpoint_url:
+        config["endpoint_url"] = endpoint_url
+
+    # Region Name
+    current = existing_config.get("region_name", "")
+    region_name = _prompt_for_value("AWS Region Name", current)
+    if region_name:
+        config["region_name"] = region_name
+
+    # Profile Name
+    current = existing_config.get("profile_name", "")
+    profile_name = _prompt_for_value("AWS Profile Name", current)
+    if profile_name:
+        config["profile_name"] = profile_name
+
+    return config, profile_name
+
+
+def _configure_aws_credentials(existing_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Configure AWS credentials."""
+    click.echo()
+    click.echo("AWS Credentials (leave empty if using profile or environment variables):")
+
+    config = {}
+
+    # Access Key ID
+    current = existing_config.get("aws_access_key_id", "")
+    access_key = _prompt_for_value("AWS Access Key ID", current)
+    if access_key:
+        config["aws_access_key_id"] = access_key
+
+    # Secret Access Key
+    current = existing_config.get("aws_secret_access_key", "")
+    secret_key = _prompt_for_value("AWS Secret Access Key", current, hide_input=True)
+    if secret_key:
+        config["aws_secret_access_key"] = secret_key
+
+    # Session Token
+    current = existing_config.get("aws_session_token", "")
+    session_token = _prompt_for_value("AWS Session Token (optional)", current)
+    if session_token:
+        config["aws_session_token"] = session_token
+
+    return config
+
+
+def _configure_theme(existing_config: Dict[str, Any]) -> str:
+    """Configure theme selection."""
+    click.echo()
+    click.echo("Theme Configuration:")
+    click.echo("-" * 18)
+
+    current_theme = existing_config.get("theme", DEFAULT_THEME)
+
+    click.echo("Available themes:")
+    for i, theme in enumerate(THEME_CHOICES, 1):
+        marker = " (current)" if theme == current_theme else ""
+        click.echo(f"  {i}. {theme}{marker}")
+
+    default_choice = THEME_CHOICES.index(current_theme) + 1 if current_theme in THEME_CHOICES else 1
+
+    theme_choice = click.prompt(
+        "Select theme (1-4)",
+        default=default_choice,
+        type=click.IntRange(1, 4),
+    )
+
+    return THEME_CHOICES[theme_choice - 1]
+
+
+def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None:
+    """Validate and save the configuration."""
+    click.echo()
+
+    # Validate configuration
+    try:
+        from s3tui.config import S3Config
+
+        S3Config(**config)
+        click.echo("✓ Configuration validated successfully!")
+    except ValueError as e:
+        click.echo(f"✗ Configuration validation failed: {e}")
+        if not click.confirm("Save configuration anyway?"):
+            click.echo("Configuration cancelled.")
+            return
+
+    # Save configuration
+    click.echo()
+    try:
+        import toml
+
+        with open(config_path, "w") as f:
+            toml.dump(config, f)
+        click.echo(f"✓ Configuration saved to {config_path}")
+    except Exception as e:
+        click.echo(f"✗ Failed to save configuration: {e}")
+
+
+def _create_s3tui_app(config_obj) -> S3TUI:
+    """Create and return an S3TUI application instance."""
+    return S3TUI(
+        endpoint_url=config_obj.endpoint_url,
+        region_name=config_obj.region_name,
+        profile_name=config_obj.profile_name,
+        aws_access_key_id=config_obj.aws_access_key_id,
+        aws_secret_access_key=config_obj.aws_secret_access_key,
+        aws_session_token=config_obj.aws_session_token,
+        theme=config_obj.theme,
+    )
 
 
 @click.group(invoke_without_command=True)
@@ -53,7 +211,7 @@ from s3tui.ui.app import S3TUI
 )
 @click.option(
     "--theme",
-    type=click.Choice(["Github Dark", "Dracula", "Solarized", "Sepia"], case_sensitive=False),
+    type=click.Choice(THEME_CHOICES, case_sensitive=False),
     help="Theme to use for the UI",
     default=None,
 )
@@ -64,7 +222,7 @@ from s3tui.ui.app import S3TUI
     default=None,
 )
 def cli(
-    ctx,
+    ctx: click.Context,
     endpoint_url: str | None = None,
     region_name: str | None = None,
     profile_name: str | None = None,
@@ -76,16 +234,16 @@ def cli(
 ):
     """S3 Terminal UI - Browse and manage S3 buckets and objects."""
     if ctx.invoked_subcommand is None:
-        # Run the main app
+        # Run the main app when no subcommand is specified
         main(
-            endpoint_url,
-            region_name,
-            profile_name,
-            aws_access_key_id,
-            aws_secret_access_key,
-            aws_session_token,
-            theme,
-            config,
+            endpoint_url=endpoint_url,
+            region_name=region_name,
+            profile_name=profile_name,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_session_token=aws_session_token,
+            theme=theme,
+            config=config,
         )
 
 
@@ -109,109 +267,22 @@ def configure(config: str | None = None):
     click.echo("Leave fields empty to use defaults or skip optional settings.")
     click.echo()
 
-    # Load existing config if it exists
-    existing_config = {}
-    if config_path.exists():
-        try:
-            import toml
+    # Load existing configuration
+    existing_config = _load_existing_config(config_path)
 
-            with open(config_path, "r") as f:
-                existing_config = toml.load(f)
-            click.echo(f"Found existing configuration at {config_path}")
-            click.echo()
-        except Exception:
-            pass
+    # Configure S3 settings
+    s3_config, profile_name = _configure_s3_settings(existing_config)
 
-    config = {}
-
-    # S3 Configuration
-    click.echo("S3 Configuration:")
-    click.echo("-" * 16)
-
-    current = existing_config.get("endpoint_url", "")
-    endpoint_url = click.prompt(
-        "Endpoint URL (for S3-compatible services like MinIO)", default=current, show_default=bool(current), type=str
-    ).strip()
-    if endpoint_url:
-        config["endpoint_url"] = endpoint_url
-
-    current = existing_config.get("region_name", "")
-    region_name = click.prompt("AWS Region Name", default=current, show_default=bool(current), type=str).strip()
-    if region_name:
-        config["region_name"] = region_name
-
-    current = existing_config.get("profile_name", "")
-    profile_name = click.prompt("AWS Profile Name", default=current, show_default=bool(current), type=str).strip()
-    if profile_name:
-        config["profile_name"] = profile_name
-
-    # Only ask for credentials if profile is not set
+    # Configure AWS credentials (only if no profile is set)
     if not profile_name:
-        click.echo()
-        click.echo("AWS Credentials (leave empty if using profile or environment variables):")
+        aws_config = _configure_aws_credentials(existing_config)
+        s3_config.update(aws_config)
 
-        current = existing_config.get("aws_access_key_id", "")
-        access_key = click.prompt("AWS Access Key ID", default=current, show_default=bool(current), type=str).strip()
-        if access_key:
-            config["aws_access_key_id"] = access_key
+    # Configure theme
+    s3_config["theme"] = _configure_theme(existing_config)
 
-        current = existing_config.get("aws_secret_access_key", "")
-        secret_key = click.prompt(
-            "AWS Secret Access Key", default=current, show_default=bool(current), hide_input=True, type=str
-        ).strip()
-        if secret_key:
-            config["aws_secret_access_key"] = secret_key
-
-        current = existing_config.get("aws_session_token", "")
-        session_token = click.prompt(
-            "AWS Session Token (optional)", default=current, show_default=bool(current), type=str
-        ).strip()
-        if session_token:
-            config["aws_session_token"] = session_token
-
-    # Theme Configuration
-    click.echo()
-    click.echo("Theme Configuration:")
-    click.echo("-" * 18)
-
-    current_theme = existing_config.get("theme", "Github Dark")
-    theme_choices = ["Github Dark", "Dracula", "Solarized", "Sepia"]
-
-    click.echo("Available themes:")
-    for i, theme in enumerate(theme_choices, 1):
-        marker = " (current)" if theme == current_theme else ""
-        click.echo(f"  {i}. {theme}{marker}")
-
-    theme_choice = click.prompt(
-        "Select theme (1-4)",
-        default=theme_choices.index(current_theme) + 1 if current_theme in theme_choices else 1,
-        type=click.IntRange(1, 4),
-    )
-    config["theme"] = theme_choices[theme_choice - 1]
-
-    # Validate configuration
-    click.echo()
-    try:
-        from s3tui.config import S3Config
-
-        S3Config(**config)
-        click.echo("✓ Configuration validated successfully!")
-    except ValueError as e:
-        click.echo(f"✗ Configuration validation failed: {e}")
-        if not click.confirm("Save configuration anyway?"):
-            click.echo("Configuration cancelled.")
-            return
-
-    # Save configuration
-    click.echo()
-    try:
-        import toml
-
-        with open(config_path, "w") as f:
-            toml.dump(config, f)
-        click.echo(f"✓ Configuration saved to {config_path}")
-    except Exception as e:
-        click.echo(f"✗ Failed to save configuration: {e}")
+    # Validate and save configuration
+    _validate_and_save_config(s3_config, config_path)
 
 
 def main(
@@ -243,15 +314,8 @@ def main(
     except ValueError as e:
         raise click.ClickException(str(e))
 
-    app = S3TUI(
-        endpoint_url=config_obj.endpoint_url,
-        region_name=config_obj.region_name,
-        profile_name=config_obj.profile_name,
-        aws_access_key_id=config_obj.aws_access_key_id,
-        aws_secret_access_key=config_obj.aws_secret_access_key,
-        aws_session_token=config_obj.aws_session_token,
-        theme=config_obj.theme,
-    )
+    # Create and run the application
+    app = _create_s3tui_app(config_obj)
     app.run()
 
 
