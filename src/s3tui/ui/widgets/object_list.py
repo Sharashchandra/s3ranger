@@ -165,8 +165,8 @@ class ObjectList(Static):
         """Apply focus to the list view after it's fully rendered."""
         try:
             list_view = self.query_one("#object-list", ListView)
+            list_view.focus()
             if len(list_view.children) > 0:
-                list_view.focus()
                 list_view.index = 0
                 # Schedule another follow-up focus with additional delay
                 self.set_timer(0.2, self._ensure_focus)
