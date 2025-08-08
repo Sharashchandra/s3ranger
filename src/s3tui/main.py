@@ -2,12 +2,14 @@ from pathlib import Path
 
 import click
 
+from s3tui import __version__
 from s3tui.config import CONFIG_FILE_PATH, load_config, merge_config_with_cli_args
 from s3tui.ui.app import S3TUI
 
 
 @click.group(invoke_without_command=True)
 @click.pass_context
+@click.version_option(version=__version__, prog_name="s3tui")
 @click.option(
     "--endpoint-url",
     type=str,
