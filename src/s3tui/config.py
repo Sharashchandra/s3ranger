@@ -28,20 +28,30 @@ class S3Config:
 
     def _validate(self):
         """Validate configuration settings."""
-        # If endpoint_url is provided, region_name is mandatory
+        # Rule 4: If endpoint_url is provided, region_name is mandatory
         if self.endpoint_url and not self.region_name:
             raise ValueError("region_name is required when endpoint_url is provided")
 
-        # Cannot pass profile_name if access_key, secret_key, or session_token is provided
-        credentials_provided = any([self.aws_access_key_id, self.aws_secret_access_key, self.aws_session_token])
-        if self.profile_name and credentials_provided:
-            raise ValueError("Cannot use profile_name when access_key, secret_key, or session_token is provided")
+        # Rule 1: If profile_name is given, do not allow aws_access_key_id, aws_secret_access_key and aws_session_token
+        if self.profile_name and any([self.aws_access_key_id, self.aws_secret_access_key, self.aws_session_token]):
+            raise ValueError(
+                "Cannot use profile_name when aws_access_key_id, aws_secret_access_key, or aws_session_token is provided"
+            )
 
-        # If credentials are provided, both access_key and secret_key are required
-        if credentials_provided and not (self.aws_access_key_id and self.aws_secret_access_key):
+        # Rule 3: If aws_session_token is given without aws_access_key_id and aws_secret_access_key, it's an error
+        if self.aws_session_token and not (self.aws_access_key_id and self.aws_secret_access_key):
+            raise ValueError(
+                "aws_session_token requires both aws_access_key_id and aws_secret_access_key to be provided"
+            )
+
+        # Rule 2: If aws_access_key_id and aws_secret_access_key are given, aws_session_token is optional
+        # This means if either access_key or secret_key is provided, both must be provided
+        if (self.aws_access_key_id or self.aws_secret_access_key) and not (
+            self.aws_access_key_id and self.aws_secret_access_key
+        ):
             raise ValueError("Both aws_access_key_id and aws_secret_access_key are required when providing credentials")
 
-        # Validate theme
+        # Rule 5: Validate theme (optional and not dependent on other fields)
         if self.theme not in ALLOWED_THEMES:
             raise ValueError(f"Invalid theme '{self.theme}'. Allowed themes: {', '.join(ALLOWED_THEMES)}")
 

@@ -521,14 +521,23 @@ class ObjectList(Static):
         # Determine if it's a folder or file
         is_folder = focused_obj.get("is_folder", False)
 
+        # Check if this is the last item in the current directory (excluding parent dir)
+        actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
+        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == focused_obj.get("key")
+
         # Import here to avoid circular imports
         from s3tui.ui.modals.delete_modal import DeleteModal
 
         # Show the delete modal
         def on_delete_result(result: bool) -> None:
             if result:
-                # Delete was successful, refresh the view
-                self.refresh_objects()
+                # Delete was successful
+                if is_last_item and self.current_prefix:
+                    # This was the last item and we're not at bucket root, navigate up
+                    self._navigate_up()
+                else:
+                    # Just refresh the view normally
+                    self.refresh_objects()
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
