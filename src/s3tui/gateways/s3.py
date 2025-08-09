@@ -53,6 +53,15 @@ class S3:
         return cls._profile_name
 
     @classmethod
+    def get_endpoint_url(cls) -> str | None:
+        """Get the current S3 endpoint URL.
+
+        Returns:
+            The S3 endpoint URL or None if using default AWS S3.
+        """
+        return cls._endpoint_url
+
+    @classmethod
     def set_credentials(
         cls,
         aws_access_key_id: str = None,

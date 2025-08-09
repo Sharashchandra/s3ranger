@@ -140,3 +140,18 @@ def get_current_aws_profile() -> str:
         return "default"
     except Exception:
         return "default"
+
+
+def get_current_endpoint_url() -> str | None:
+    """Get the current S3 endpoint URL or None if using default AWS S3.
+
+    Returns:
+        The current S3 endpoint URL or None if using default AWS S3.
+    """
+    try:
+        # Import here to avoid circular import
+        from s3tui.gateways.s3 import S3
+
+        return S3.get_endpoint_url()
+    except Exception:
+        return None
