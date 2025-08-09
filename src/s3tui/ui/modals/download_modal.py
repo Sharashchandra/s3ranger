@@ -9,7 +9,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
-from textual_fspicker import FileOpen, SelectDirectory
+from textual_fspicker import SelectDirectory
 
 from s3tui.gateways.s3 import S3
 from s3tui.ui.widgets import ProgressWidget
@@ -59,19 +59,29 @@ class DownloadModal(ModalScreen[bool]):
                 # Source field (read-only)
                 with Vertical(classes="field-group"):
                     yield Label("Source (S3)", classes="field-label")
-                    yield Static(self.s3_path, id="source-field", classes="field-value readonly")
-                    yield Label("Files will be downloaded from this S3 location", classes="field-help")
+                    yield Static(
+                        self.s3_path, id="source-field", classes="field-value readonly"
+                    )
+                    yield Label(
+                        "Files will be downloaded from this S3 location",
+                        classes="field-help",
+                    )
 
                 # Destination field (editable)
                 with Vertical(classes="field-group"):
                     yield Label("Destination", classes="field-label")
                     with Horizontal(classes="input-with-button"):
                         yield Input(
-                            value="~/Downloads/", placeholder="Enter local destination path...", id="destination-input"
+                            value="~/Downloads/",
+                            placeholder="Enter local destination path...",
+                            id="destination-input",
                         )
-                        yield Button("📁", id="file-picker-btn", classes="file-picker-button")
+                        yield Button(
+                            "📁", id="file-picker-btn", classes="file-picker-button"
+                        )
                     yield Label(
-                        "Local path where files will be saved (~ expands to home directory)", classes="field-help"
+                        "Local path where files will be saved (~ expands to home directory)",
+                        classes="field-help",
                     )
 
             # Dialog footer
@@ -79,11 +89,21 @@ class DownloadModal(ModalScreen[bool]):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
-                            yield Static("[bold white]Ctrl+Enter[/] Download", classes="keybinding")
+                            yield Static(
+                                "[bold white]Tab[/] Navigate", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+Enter[/] Download",
+                                classes="keybinding",
+                            )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
-                            yield Static("[bold white]Ctrl+O[/] Open File Picker", classes="keybinding")
+                            yield Static(
+                                "[bold white]Esc[/] Cancel", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+O[/] Open File Picker",
+                                classes="keybinding",
+                            )
 
                     with Vertical(classes="dialog-actions"):
                         yield Button("Cancel", id="cancel-btn")
@@ -169,7 +189,9 @@ class DownloadModal(ModalScreen[bool]):
         self.is_downloading = True
 
         # Use threading to download asynchronously
-        thread = threading.Thread(target=self._download_async, args=(destination,), daemon=True)
+        thread = threading.Thread(
+            target=self._download_async, args=(destination,), daemon=True
+        )
         thread.start()
 
     def _download_async(self, destination: str) -> None:
@@ -204,11 +226,8 @@ class DownloadModal(ModalScreen[bool]):
 
     @work
     async def action_file_picker(self) -> None:
-        # Use SelectDirectory for folders, FileOpen for files
-        picker_cls = FileOpen
-        if self.is_folder:
-            picker_cls = SelectDirectory
-        picker = picker_cls(location=FILE_PICKER_DEFAULT_PATH)
+        # Use SelectDirectory for both file and directory selection
+        picker = SelectDirectory(location=FILE_PICKER_DEFAULT_PATH)
 
         if path := await self.app.push_screen_wait(picker):
             if path.is_dir():
