@@ -3,12 +3,12 @@ from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widgets import Static
 
-from s3tui.ui.utils import get_current_aws_profile
+from s3tui.ui.utils import get_current_aws_profile, get_current_endpoint_url
 
 
 class TitleBar(Static):
     """Title bar widget matching the HTML design"""
-    
+
     # Reactive property to track connection status
     connection_error: bool = reactive(False)
 
@@ -17,7 +17,16 @@ class TitleBar(Static):
             yield Static("S3 Browser", id="title")
             with Horizontal(id="status-container"):
                 yield Static("●", id="connected-indicator")
-                yield Static(f"aws-profile: {get_current_aws_profile()}", id="aws-info")
+
+                # Build the AWS info string with profile and optional endpoint
+                profile = get_current_aws_profile()
+                endpoint_url = get_current_endpoint_url()
+
+                aws_info = f"aws-profile: {profile}"
+                if endpoint_url:
+                    aws_info = f"aws-profile: {profile} ({endpoint_url})"
+
+                yield Static(aws_info, id="aws-info")
 
     def watch_connection_error(self, connection_error: bool) -> None:
         """React to connection error state changes."""

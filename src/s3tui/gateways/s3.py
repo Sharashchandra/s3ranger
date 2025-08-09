@@ -53,8 +53,20 @@ class S3:
         return cls._profile_name
 
     @classmethod
+    def get_endpoint_url(cls) -> str | None:
+        """Get the current S3 endpoint URL.
+
+        Returns:
+            The S3 endpoint URL or None if using default AWS S3.
+        """
+        return cls._endpoint_url
+
+    @classmethod
     def set_credentials(
-        cls, aws_access_key_id: str = None, aws_secret_access_key: str = None, aws_session_token: str = None
+        cls,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        aws_session_token: str = None,
     ) -> None:
         """Set the AWS credentials for all S3 operations.
 
@@ -107,7 +119,9 @@ class S3:
             command.extend(["--profile", cls._profile_name])
 
         try:
-            result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                command, env=env, capture_output=True, text=True, check=True
+            )
             return result.stdout
         except subprocess.CalledProcessError as e:
             raise RuntimeError(e.stderr)
@@ -169,7 +183,13 @@ class S3:
     @staticmethod
     def resolve_s3_uri(func):
         @wraps(func)
-        def wrapper(*args, s3_uri: str = None, bucket_name: str = None, prefix: str = None, **kwargs):
+        def wrapper(
+            *args,
+            s3_uri: str = None,
+            bucket_name: str = None,
+            prefix: str = None,
+            **kwargs,
+        ):
             if not s3_uri and not bucket_name:
                 raise ValueError("Either s3_uri or bucket and key must be provided")
             if s3_uri:
@@ -218,10 +238,14 @@ class S3:
     @get_client
     @resolve_s3_uri
     @staticmethod
-    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> list[dict]:
+    def list_objects_for_prefix(
+        client: boto3.client, *, bucket_name: str, prefix: str | None = None
+    ) -> list[dict]:
         """List objects in a bucket for a specific prefix."""
         paginator = client.get_paginator("list_objects_v2")
-        response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "", Delimiter="/")
+        response_iterator = paginator.paginate(
+            Bucket=bucket_name, Prefix=prefix or "", Delimiter="/"
+        )
 
         print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}'")
         objects = {}
@@ -238,19 +262,29 @@ class S3:
     @get_client
     @resolve_s3_uri
     @staticmethod
-    def upload_file(client: boto3.client, *, local_file_path: str, bucket_name: str, prefix: str = None) -> None:
+    def upload_file(
+        client: boto3.client,
+        *,
+        local_file_path: str,
+        bucket_name: str,
+        prefix: str = None,
+    ) -> None:
         """Upload a file to S3."""
         if not prefix or prefix.endswith("/"):
             key = f"{prefix or ''}{os.path.basename(local_file_path)}"
         else:
             key = prefix
 
-        print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
+        print(
+            f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
+        )
         client.upload_file(local_file_path, bucket_name, key)
 
     @resolve_s3_uri
     @staticmethod
-    def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str = None) -> None:
+    def upload_directory(
+        *, local_dir_path: str, bucket_name: str, prefix: str = None
+    ) -> None:
         """Upload a directory to S3."""
         local_dir_path = local_dir_path.rstrip("/")
         if not os.path.isdir(local_dir_path):
@@ -290,7 +324,9 @@ class S3:
                 relative_path = os.path.relpath(local_file_path, local_dir_path)
                 key = f"{prefix}{relative_path.replace(os.sep, '/')}"
 
-                print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
+                print(
+                    f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
+                )
                 client.upload_file(local_file_path, bucket_name, key)
 
     # -------------------------Download------------------------- #
@@ -322,19 +358,40 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def download_directory(*, bucket_name: str, prefix: str = None, local_dir_path: str = None) -> None:
+    def download_directory(
+        *, bucket_name: str, prefix: str = None, local_dir_path: str = None
+    ) -> None:
         """Download a directory from S3."""
         if not local_dir_path:
-            local_dir_path = os.path.join(os.getcwd(), prefix or "")
+            local_dir_path = os.getcwd()
 
-        # Ensure local_dir_path is treated as a directory for directory downloads
-        if not local_dir_path.endswith("/"):
-            local_dir_path += "/"
+        # Extract the directory name from the prefix
+        if prefix:
+            # Remove trailing slashes and get the last part of the path
+            s3_dir_name = prefix.rstrip("/").split("/")[-1]
+        else:
+            s3_dir_name = "root"
 
-        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
+        # Create the target directory path
+        target_dir = os.path.join(local_dir_path, s3_dir_name)
+
+        # Ensure the target directory exists
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Ensure target_dir is treated as a directory for directory downloads
+        if not target_dir.endswith("/"):
+            target_dir += "/"
+
+        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {target_dir}")
 
         # Build AWS CLI command arguments
-        command_args = ["s3", "cp", f"s3://{bucket_name}/{prefix or ''}", local_dir_path, "--recursive"]
+        command_args = [
+            "s3",
+            "cp",
+            f"s3://{bucket_name}/{prefix or ''}",
+            target_dir,
+            "--recursive",
+        ]
 
         # Run the command with error handling
         S3._run_aws_cli_command(command_args)
@@ -353,19 +410,27 @@ class S3:
         paginator = client.get_paginator("list_objects_v2")
         response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
 
-        # Ensure local_dir_path is treated as a directory for directory downloads
-        if not local_dir_path.endswith("/") and local_dir_path != ".":
-            local_dir_path += "/"
+        # Extract the directory name from the prefix
+        if prefix:
+            # Remove trailing slashes and get the last part of the path
+            s3_dir_name = prefix.rstrip("/").split("/")[-1]
+        else:
+            s3_dir_name = "root"
 
-        if not os.path.exists(local_dir_path.rstrip("/")):
-            os.makedirs(local_dir_path.rstrip("/"))
+        # Create the target directory path
+        target_dir = os.path.join(local_dir_path, s3_dir_name)
 
-        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {local_dir_path}")
+        # Ensure the target directory exists
+        os.makedirs(target_dir, exist_ok=True)
+
+        print(f"Downloading directory from s3://{bucket_name}/{prefix} to {target_dir}")
         for response in response_iterator:
             if "Contents" in response:
                 for obj in response["Contents"]:
                     file_key = obj["Key"]
-                    local_file_path = os.path.join(local_dir_path.rstrip("/"), os.path.relpath(file_key, prefix or ""))
+                    # Calculate relative path from the prefix
+                    relative_path = os.path.relpath(file_key, prefix or "")
+                    local_file_path = os.path.join(target_dir, relative_path)
                     os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
                     client.download_file(bucket_name, file_key, local_file_path)
 
@@ -411,8 +476,12 @@ class S3:
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
         for response in response_iterator:
             if "Contents" in response:
-                objects_to_delete = [{"Key": obj["Key"]} for obj in response["Contents"]]
-                client.delete_objects(Bucket=bucket_name, Delete={"Objects": objects_to_delete})
+                objects_to_delete = [
+                    {"Key": obj["Key"]} for obj in response["Contents"]
+                ]
+                client.delete_objects(
+                    Bucket=bucket_name, Delete={"Objects": objects_to_delete}
+                )
 
     # -------------------------Move------------------------- #
 
