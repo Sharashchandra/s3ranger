@@ -1,4 +1,4 @@
-# s3tui
+# S3TUI
 
 A terminal-based user interface for browsing and managing AWS S3 buckets and objects. Built with Python and [Textual](https://textual.textualize.io/), s3tui provides an intuitive way to interact with S3 storage directly from your terminal.
 
@@ -20,7 +20,7 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 - 🎨 **Multiple themes** (GitHub Dark, Dracula, Solarized, Sepia)
 - ⚙️ **Flexible configuration** via CLI arguments, config files, or environment variables
 - 🔐 **Multiple authentication methods** (profiles, access keys, session tokens)
-- 🌐 **S3-compatible services** support (MinIO, DigitalOcean Spaces, etc.)
+- 🌐 **S3-compatible services** support (LocalStack, MinIO, etc.)
 
 ## Installation
 
@@ -57,11 +57,13 @@ pip install -e .
 First, ensure you have AWS credentials configured. You can use any of these methods:
 
 #### Option A: AWS CLI (recommended)
+
 ```bash
 aws configure
 ```
 
 #### Option B: Environment variables
+
 ```bash
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
@@ -69,6 +71,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ```
 
 #### Option C: s3tui configuration
+
 ```bash
 s3tui configure
 ```
@@ -105,39 +108,40 @@ s3tui configure
 
 ### Command Line Options
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--endpoint-url` | Custom S3 endpoint URL | `--endpoint-url https://minio.example.com` |
-| `--region-name` | AWS region name | `--region-name us-west-2` |
-| `--profile-name` | AWS profile name | `--profile-name production` |
-| `--aws-access-key-id` | AWS access key ID | `--aws-access-key-id AKIAIOSFODNN7EXAMPLE` |
-| `--aws-secret-access-key` | AWS secret access key | `--aws-secret-access-key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
-| `--aws-session-token` | AWS session token | `--aws-session-token token123` |
-| `--theme` | UI theme | `--theme "github dark"` |
-| `--config` | Configuration file path | `--config ~/.s3tui.config` |
+| Option                    | Description             | Example                                                            |
+| ------------------------- | ----------------------- | ------------------------------------------------------------------ |
+| `--endpoint-url`          | Custom S3 endpoint URL  | `--endpoint-url https://minio.example.com`                         |
+| `--region-name`           | AWS region name         | `--region-name us-west-2`                                          |
+| `--profile-name`          | AWS profile name        | `--profile-name production`                                        |
+| `--aws-access-key-id`     | AWS access key ID       | `--aws-access-key-id AKIAIOSFODNN7EXAMPLE`                         |
+| `--aws-secret-access-key` | AWS secret access key   | `--aws-secret-access-key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
+| `--aws-session-token`     | AWS session token       | `--aws-session-token token123`                                     |
+| `--theme`                 | UI theme                | `--theme "github dark"`                                            |
+| `--config`                | Configuration file path | `--config ~/.s3tui.config`                                         |
 
 ### Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Switch between panels |
-| `Enter` | Enter bucket/folder or download file |
-| `Ctrl+R` | Refresh current view |
-| `Ctrl+F` | Filter/search |
-| `Ctrl+H` | Show help modal |
-| `Ctrl+Q` | Quit application |
-| `Ctrl+P` | Open command palette |
-| `U` | Upload file/folder |
-| `D` | Download selected item |
-| `Delete` | Delete selected item |
-| `Ctrl+K` | Rename selected item |
-| `F1` | Help |
+| Key      | Action                               |
+| -------- | ------------------------------------ |
+| `Tab`    | Switch between panels                |
+| `Enter`  | Enter bucket/folder or download file |
+| `Ctrl+R` | Refresh current view                 |
+| `Ctrl+F` | Filter/search                        |
+| `Ctrl+H` | Show help modal                      |
+| `Ctrl+Q` | Quit application                     |
+| `Ctrl+P` | Open command palette                 |
+| `U`      | Upload file/folder                   |
+| `D`      | Download selected item               |
+| `Delete` | Delete selected item                 |
+| `Ctrl+K` | Rename selected item                 |
+| `F1`     | Help                                 |
 
 ### Working with S3-Compatible Services
 
 s3tui works with any S3-compatible service:
 
 #### LocalStack
+
 ```bash
 s3tui --endpoint-url http://localhost:4566 --region-name us-east-1
 ```
@@ -193,11 +197,13 @@ s3tui comes with several built-in themes:
 - **Sepia** - Warm, vintage-inspired theme
 
 Change themes using:
+
 ```bash
 s3tui --theme dracula
 ```
 
 Or through the configuration file:
+
 ```toml
 theme = "Dracula"
 ```
@@ -223,7 +229,6 @@ uv run s3tui
 pip install -e ".[dev]"
 python -m s3tui.main
 ```
-
 
 ## Contributing
 
