@@ -1,7 +1,7 @@
 """
-S3TUI - S3 Terminal User Interface
+S3Ranger - S3 Terminal User Interface
 
-This module provides the main CLI entry point for S3TUI, a terminal-based interface
+This module provides the main CLI entry point for S3Ranger, a terminal-based interface
 for browsing and managing S3 buckets and objects. It includes configuration management
 and interactive setup capabilities.
 """
@@ -11,9 +11,9 @@ from typing import Any, Dict
 
 import click
 
-from s3tui import __version__
-from s3tui.config import CONFIG_FILE_PATH, load_config, merge_config_with_cli_args
-from s3tui.ui.app import S3TUI
+from s3ranger import __version__
+from s3ranger.config import CONFIG_FILE_PATH, load_config, merge_config_with_cli_args
+from s3ranger.ui.app import S3Ranger
 
 # Constants
 THEME_CHOICES = ["Github Dark", "Dracula", "Solarized", "Sepia"]
@@ -37,10 +37,16 @@ def _load_existing_config(config_path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _prompt_for_value(prompt_text: str, current_value: str = "", hide_input: bool = False) -> str:
+def _prompt_for_value(
+    prompt_text: str, current_value: str = "", hide_input: bool = False
+) -> str:
     """Helper function to prompt for a configuration value."""
     return click.prompt(
-        prompt_text, default=current_value, show_default=bool(current_value), hide_input=hide_input, type=str
+        prompt_text,
+        default=current_value,
+        show_default=bool(current_value),
+        hide_input=hide_input,
+        type=str,
     ).strip()
 
 
@@ -53,7 +59,9 @@ def _configure_s3_settings(existing_config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Endpoint URL
     current = existing_config.get("endpoint_url", "")
-    endpoint_url = _prompt_for_value("Endpoint URL (for S3-compatible services like MinIO)", current)
+    endpoint_url = _prompt_for_value(
+        "Endpoint URL (for S3-compatible services like MinIO)", current
+    )
     if endpoint_url:
         config["endpoint_url"] = endpoint_url
 
@@ -75,7 +83,9 @@ def _configure_s3_settings(existing_config: Dict[str, Any]) -> Dict[str, Any]:
 def _configure_aws_credentials(existing_config: Dict[str, Any]) -> Dict[str, Any]:
     """Configure AWS credentials."""
     click.echo()
-    click.echo("AWS Credentials (leave empty if using profile or environment variables):")
+    click.echo(
+        "AWS Credentials (leave empty if using profile or environment variables):"
+    )
 
     config = {}
 
@@ -113,7 +123,9 @@ def _configure_theme(existing_config: Dict[str, Any]) -> str:
         marker = " (current)" if theme == current_theme else ""
         click.echo(f"  {i}. {theme}{marker}")
 
-    default_choice = THEME_CHOICES.index(current_theme) + 1 if current_theme in THEME_CHOICES else 1
+    default_choice = (
+        THEME_CHOICES.index(current_theme) + 1 if current_theme in THEME_CHOICES else 1
+    )
 
     theme_choice = click.prompt(
         "Select theme (1-4)",
@@ -130,7 +142,7 @@ def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None
 
     # Validate configuration
     try:
-        from s3tui.config import S3Config
+        from s3ranger.config import S3Config
 
         S3Config(**config)
         click.echo("✓ Configuration validated successfully!")
@@ -152,9 +164,9 @@ def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None
         click.echo(f"✗ Failed to save configuration: {e}")
 
 
-def _create_s3tui_app(config_obj) -> S3TUI:
-    """Create and return an S3TUI application instance."""
-    return S3TUI(
+def _create_s3ranger_app(config_obj) -> S3Ranger:
+    """Create and return an S3Ranger application instance."""
+    return S3Ranger(
         endpoint_url=config_obj.endpoint_url,
         region_name=config_obj.region_name,
         profile_name=config_obj.profile_name,
@@ -167,7 +179,7 @@ def _create_s3tui_app(config_obj) -> S3TUI:
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.version_option(version=__version__, prog_name="s3tui")
+@click.version_option(version=__version__, prog_name="s3ranger")
 @click.option(
     "--endpoint-url",
     type=str,
@@ -218,7 +230,7 @@ def _create_s3tui_app(config_obj) -> S3TUI:
 @click.option(
     "--config",
     type=click.Path(exists=True, readable=True, path_type=str),
-    help="Path to configuration file (default: ~/.s3tui.config)",
+    help="Path to configuration file (default: ~/.s3ranger.config)",
     default=None,
 )
 def cli(
@@ -251,19 +263,21 @@ def cli(
 @click.option(
     "--config",
     type=click.Path(path_type=str),
-    help="Path to configuration file (default: ~/.s3tui.config)",
+    help="Path to configuration file (default: ~/.s3ranger.config)",
     default=None,
 )
 def configure(config: str | None = None):
-    """Interactive configuration setup for S3TUI"""
+    """Interactive configuration setup for S3Ranger"""
     # Determine config file path
     config_path = CONFIG_FILE_PATH
     if config:
         config_path = Path(config)
 
-    click.echo("S3TUI Configuration Setup")
+    click.echo("S3Ranger Configuration Setup")
     click.echo("=" * 30)
-    click.echo("Press Space and Enter without typing anything to remove an existing value.")
+    click.echo(
+        "Press Space and Enter without typing anything to remove an existing value."
+    )
     click.echo("Leave fields empty to use defaults or skip optional settings.")
     click.echo()
 
@@ -315,7 +329,7 @@ def main(
         raise click.ClickException(str(e))
 
     # Create and run the application
-    app = _create_s3tui_app(config_obj)
+    app = _create_s3ranger_app(config_obj)
     app.run()
 
 

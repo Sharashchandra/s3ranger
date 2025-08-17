@@ -1,4 +1,4 @@
-"""Modal dialogs for S3TUI."""
+"""Modal dialogs for S3Ranger."""
 
 from .delete_modal import DeleteModal
 from .download_modal import DownloadModal

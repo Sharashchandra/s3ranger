@@ -4,10 +4,10 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, ListView
 
-from s3tui.ui.modals.help_modal import HelpModal
-from s3tui.ui.widgets.bucket_list import BucketList
-from s3tui.ui.widgets.object_list import ObjectList
-from s3tui.ui.widgets.title_bar import TitleBar
+from s3ranger.ui.modals.help_modal import HelpModal
+from s3ranger.ui.widgets.bucket_list import BucketList
+from s3ranger.ui.widgets.object_list import ObjectList
+from s3ranger.ui.widgets.title_bar import TitleBar
 
 
 class MainScreen(Screen):
@@ -40,7 +40,9 @@ class MainScreen(Screen):
         except Exception:
             bucket_list.focus()
 
-    def on_bucket_list_bucket_selected(self, message: BucketList.BucketSelected) -> None:
+    def on_bucket_list_bucket_selected(
+        self, message: BucketList.BucketSelected
+    ) -> None:
         """Handle bucket selection from BucketList widget"""
         object_list = self.query_one("#object-list", ObjectList)
         object_list.set_bucket(message.bucket_name)

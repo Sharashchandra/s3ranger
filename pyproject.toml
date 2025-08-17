@@ -1,5 +1,5 @@
 [project]
-name = "s3tui"
+name = "s3ranger"
 version = "1.0.0"
 description = "A terminal-based user interface for browsing and managing AWS S3 buckets and objects"
 readme = "README.md"
@@ -30,12 +30,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Sharashchandra/s3tui"
-Repository = "https://github.com/Sharashchandra/s3tui"
-Issues = "https://github.com/Sharashchandra/s3tui/issues"
+Homepage = "https://github.com/Sharashchandra/s3ranger"
+Repository = "https://github.com/Sharashchandra/s3ranger"
+Issues = "https://github.com/Sharashchandra/s3ranger/issues"
 
 [project.scripts]
-s3tui = "s3tui.main:cli"
+s3ranger = "s3ranger.main:cli"
 
 [build-system]
 requires = ["hatchling"]

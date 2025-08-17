@@ -1,4 +1,4 @@
-"""Rename modal for S3TUI."""
+"""Rename modal for S3Ranger."""
 
 import os
 import threading
@@ -9,8 +9,8 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.widgets import ProgressWidget
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.widgets import ProgressWidget
 
 
 class RenameModal(ModalScreen[bool]):
@@ -27,7 +27,9 @@ class RenameModal(ModalScreen[bool]):
     is_renaming: bool = reactive(False)
     current_objects: list = reactive([])  # To check for name conflicts
 
-    def __init__(self, s3_path: str, is_folder: bool = False, current_objects: list = None) -> None:
+    def __init__(
+        self, s3_path: str, is_folder: bool = False, current_objects: list = None
+    ) -> None:
         """Initialize the rename modal.
 
         Args:
@@ -64,12 +66,18 @@ class RenameModal(ModalScreen[bool]):
                 # Current name field (read-only)
                 with Vertical(classes="field-group"):
                     yield Label("Current Name", classes="field-label")
-                    yield Static("", id="current-name-field", classes="field-value readonly")
+                    yield Static(
+                        "", id="current-name-field", classes="field-value readonly"
+                    )
 
                 # New name field (editable)
                 with Vertical(classes="field-group"):
                     yield Label("New Name", classes="field-label")
-                    yield Input(placeholder="Enter new name...", id="new-name-input", classes="rename-input")
+                    yield Input(
+                        placeholder="Enter new name...",
+                        id="new-name-input",
+                        classes="rename-input",
+                    )
                     yield Label("", id="name-validation", classes="field-help")
 
             # Dialog footer
@@ -77,10 +85,16 @@ class RenameModal(ModalScreen[bool]):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
-                            yield Static("[bold white]Ctrl+Enter[/] Rename", classes="keybinding")
+                            yield Static(
+                                "[bold white]Tab[/] Navigate", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+Enter[/] Rename", classes="keybinding"
+                            )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
+                            yield Static(
+                                "[bold white]Esc[/] Cancel", classes="keybinding"
+                            )
 
                     with Vertical(classes="dialog-actions"):
                         yield Button("Cancel", id="cancel-btn")
@@ -212,7 +226,9 @@ class RenameModal(ModalScreen[bool]):
         self.is_renaming = True
 
         # Use threading to rename asynchronously
-        thread = threading.Thread(target=self._rename_async, args=(new_name,), daemon=True)
+        thread = threading.Thread(
+            target=self._rename_async, args=(new_name,), daemon=True
+        )
         thread.start()
 
     def _rename_async(self, new_name: str) -> None:

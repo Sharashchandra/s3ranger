@@ -1,12 +1,12 @@
-# S3TUI
+# S3Ranger
 
-A terminal-based user interface for browsing and managing AWS S3 buckets and objects. Built with Python and [Textual](https://textual.textualize.io/), s3tui provides an intuitive way to interact with S3 storage directly from your terminal.
+A terminal-based user interface for browsing and managing AWS S3 buckets and objects. Built with Python and [Textual](https://textual.textualize.io/), s3ranger provides an intuitive way to interact with S3 storage directly from your terminal.
 
-![s3tui Screenshot](pics/main_screen.png)
-![s3tui Screenshot](pics/download.png)
-![s3tui Screenshot](pics/upload.png)
-![s3tui Screenshot](pics/delete.png)
-![s3tui Screenshot](pics/rename.png)
+![s3ranger Screenshot](pics/main_screen.png)
+![s3ranger Screenshot](pics/download.png)
+![s3ranger Screenshot](pics/upload.png)
+![s3ranger Screenshot](pics/delete.png)
+![s3ranger Screenshot](pics/rename.png)
 
 ## Features
 
@@ -27,26 +27,26 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 ### Using pip
 
 ```bash
-pip install s3tui
+pip install s3ranger
 ```
 
 ### Using pipx (recommended for CLI tools)
 
 ```bash
-pipx install s3tui
+pipx install s3ranger
 ```
 
 ### Using uv
 
 ```bash
-uv add s3tui
+uv add s3ranger
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/Sharashchandra/s3tui.git
-cd s3tui
+git clone https://github.com/Sharashchandra/s3ranger.git
+cd s3ranger
 pip install -e .
 ```
 
@@ -70,16 +70,16 @@ export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_DEFAULT_REGION=us-east-1
 ```
 
-#### Option C: s3tui configuration
+#### Option C: s3ranger configuration
 
 ```bash
-s3tui configure
+s3ranger configure
 ```
 
-### 2. Launch s3tui
+### 2. Launch s3ranger
 
 ```bash
-s3tui
+s3ranger
 ```
 
 ## Usage
@@ -88,22 +88,22 @@ s3tui
 
 ```bash
 # Launch the TUI
-s3tui
+s3ranger
 
 # Launch with specific AWS profile
-s3tui --profile-name myprofile
+s3ranger --profile-name myprofile
 
 # Launch with custom endpoint (for S3-compatible services)
-s3tui --endpoint-url https://s3.amazonaws.com --region-name us-west-2
+s3ranger --endpoint-url https://s3.amazonaws.com --region-name us-west-2
 
 # Launch with specific theme
-s3tui --theme dracula
+s3ranger --theme dracula
 
 # Show help
-s3tui --help
+s3ranger --help
 
 # Interactive configuration
-s3tui configure
+s3ranger configure
 ```
 
 ### Command Line Options
@@ -117,7 +117,7 @@ s3tui configure
 | `--aws-secret-access-key` | AWS secret access key   | `--aws-secret-access-key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
 | `--aws-session-token`     | AWS session token       | `--aws-session-token token123`                                     |
 | `--theme`                 | UI theme                | `--theme "github dark"`                                            |
-| `--config`                | Configuration file path | `--config ~/.s3tui.config`                                         |
+| `--config`                | Configuration file path | `--config ~/.s3ranger.config`                                         |
 
 ### Keyboard Shortcuts
 
@@ -138,19 +138,19 @@ s3tui configure
 
 ### Working with S3-Compatible Services
 
-s3tui works with any S3-compatible service:
+s3ranger works with any S3-compatible service:
 
 #### LocalStack
 
 ```bash
-s3tui --endpoint-url http://localhost:4566 --region-name us-east-1
+s3ranger --endpoint-url http://localhost:4566 --region-name us-east-1
 ```
 
 ## Configuration
 
 ### Configuration File
 
-s3tui can be configured using a TOML configuration file located at `~/.s3tui.config`:
+s3ranger can be configured using a TOML configuration file located at `~/.s3ranger.config`:
 
 ```toml
 # AWS Configuration
@@ -169,7 +169,7 @@ theme = "Github Dark"
 
 ### Environment Variables
 
-s3tui respects standard AWS environment variables:
+s3ranger respects standard AWS environment variables:
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
@@ -189,7 +189,7 @@ Configuration is applied in the following order (highest to lowest priority):
 
 ## Themes
 
-s3tui comes with several built-in themes:
+s3ranger comes with several built-in themes:
 
 - **GitHub Dark** (default) - Dark theme inspired by GitHub's interface
 - **Dracula** - Popular dark theme with purple accents
@@ -199,7 +199,7 @@ s3tui comes with several built-in themes:
 Change themes using:
 
 ```bash
-s3tui --theme dracula
+s3ranger --theme dracula
 ```
 
 Or through the configuration file:
@@ -218,16 +218,16 @@ theme = "Dracula"
 ### Setup
 
 ```bash
-git clone https://github.com/Sharashchandra/s3tui.git
-cd s3tui
+git clone https://github.com/Sharashchandra/s3ranger.git
+cd s3ranger
 
 # Using uv
 uv sync
-uv run s3tui
+uv run s3ranger
 
 # Using pip
 pip install -e ".[dev]"
-python -m s3tui.main
+python -m s3ranger.main
 ```
 
 ## Contributing
@@ -255,6 +255,6 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 If you encounter any issues or have questions:
 
-- 🐛 [Report bugs](https://github.com/Sharashchandra/s3tui/issues)
-- 💡 [Request features](https://github.com/Sharashchandra/s3tui/issues)
-- 💬 [Discussions](https://github.com/Sharashchandra/s3tui/discussions)
+- 🐛 [Report bugs](https://github.com/Sharashchandra/s3ranger/issues)
+- 💡 [Request features](https://github.com/Sharashchandra/s3ranger/issues)
+- 💬 [Discussions](https://github.com/Sharashchandra/s3ranger/discussions)

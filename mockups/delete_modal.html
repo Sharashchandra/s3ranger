@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S3TUI - Delete Modal</title>
+    <title>S3Ranger - Delete Modal</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -121,18 +121,18 @@
     </style>
 </head>
 <body>
-    <h1>S3TUI Delete Modal</h1>
-    
+    <h1>S3Ranger Delete Modal</h1>
+
     <p>The delete modal allows users to permanently delete files or folders from S3. This action cannot be undone.</p>
-    
+
     <h2>Modal Design</h2>
-    
+
     <div class="modal-container">
         <div class="modal-header">
             <div class="modal-title">Delete File</div>
             <div class="modal-subtitle">This action cannot be undone</div>
         </div>
-        
+
         <div class="modal-content">
             <div class="field-group">
                 <label class="field-label">Source (S3)</label>
@@ -140,7 +140,7 @@
                 <div class="field-help">This file will be permanently deleted from S3</div>
             </div>
         </div>
-        
+
         <div class="modal-footer">
             <div class="keybindings">
                 <div class="keybinding-row">
@@ -151,22 +151,22 @@
                     <span class="keybinding"><kbd>Esc</kbd> Cancel</span>
                 </div>
             </div>
-            
+
             <div class="actions">
                 <button class="btn btn-cancel">Cancel</button>
                 <button class="btn btn-delete">Delete</button>
             </div>
         </div>
     </div>
-    
+
     <h2>For Folders</h2>
-    
+
     <div class="modal-container" style="margin-top: 20px;">
         <div class="modal-header">
             <div class="modal-title">Delete Folder</div>
             <div class="modal-subtitle">This action cannot be undone</div>
         </div>
-        
+
         <div class="modal-content">
             <div class="field-group">
                 <label class="field-label">Source (S3)</label>
@@ -174,7 +174,7 @@
                 <div class="field-help">This folder and all its contents will be permanently deleted from S3</div>
             </div>
         </div>
-        
+
         <div class="modal-footer">
             <div class="keybindings">
                 <div class="keybinding-row">
@@ -185,16 +185,16 @@
                     <span class="keybinding"><kbd>Esc</kbd> Cancel</span>
                 </div>
             </div>
-            
+
             <div class="actions">
                 <button class="btn btn-cancel">Cancel</button>
                 <button class="btn btn-delete">Delete</button>
             </div>
         </div>
     </div>
-    
+
     <h2>Features</h2>
-    
+
     <ul>
         <li><strong>Confirmation Required:</strong> Shows clear warning that the action cannot be undone</li>
         <li><strong>File/Folder Support:</strong> Can delete individual files or entire directories</li>
@@ -204,13 +204,13 @@
         <li><strong>Loading State:</strong> Shows loading indicator during deletion</li>
         <li><strong>Error Handling:</strong> Displays helpful error messages if deletion fails</li>
     </ul>
-    
+
     <h2>Usage</h2>
-    
+
     <p>To use the delete modal in your code:</p>
-    
+
     <pre style="background: #21262d; padding: 16px; border-radius: 6px; color: #c9d1d9; overflow-x: auto;">
-from s3tui.ui.modals import DeleteModal
+from s3ranger.ui.modals import DeleteModal
 
 # For deleting a file
 def delete_file(self, s3_path: str):
