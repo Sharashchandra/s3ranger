@@ -7,9 +7,9 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.utils import format_file_size, format_folder_display_text
-from s3tui.ui.widgets.breadcrumb import Breadcrumb
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.utils import format_file_size, format_folder_display_text
+from s3ranger.ui.widgets.breadcrumb import Breadcrumb
 
 # Constants
 PARENT_DIR_KEY = ".."
@@ -38,7 +38,9 @@ class ObjectItem(ListItem):
 
     def compose(self) -> ComposeResult:
         """Render the object item with its properties in columns."""
-        name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
+        name_with_icon = self._format_object_name(
+            self.object_info["key"], self.object_info["is_folder"]
+        )
         with Horizontal():
             yield Label(name_with_icon, classes="object-key")
             yield Label(self.object_info["type"], classes="object-extension")
@@ -234,7 +236,9 @@ class ObjectList(Static):
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
-            objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
+            objects = S3.list_objects_for_prefix(
+                bucket_name=self.current_bucket, prefix=self.current_prefix
+            )
             self.app.call_later(lambda: self._on_objects_loaded(objects))
         except Exception as error:
             # Capture the error explicitly in the closure
@@ -329,7 +333,13 @@ class ObjectList(Static):
 
     def _create_parent_dir_object(self) -> dict:
         """Create the parent directory (..) object."""
-        return {"key": PARENT_DIR_KEY, "is_folder": True, "size": "", "modified": "", "type": "dir"}
+        return {
+            "key": PARENT_DIR_KEY,
+            "is_folder": True,
+            "size": "",
+            "modified": "",
+            "type": "dir",
+        }
 
     def _create_folder_object(self, folder_name: str) -> dict:
         """Create a folder object for the UI."""
@@ -470,7 +480,7 @@ class ObjectList(Static):
         is_folder = focused_obj.get("is_folder", False)
 
         # Import here to avoid circular imports
-        from s3tui.ui.modals.download_modal import DownloadModal
+        from s3ranger.ui.modals.download_modal import DownloadModal
 
         # Show the download modal
         def on_download_result(result: bool) -> None:
@@ -496,7 +506,7 @@ class ObjectList(Static):
         upload_destination = current_location
 
         # Import here to avoid circular imports
-        from s3tui.ui.modals.upload_modal import UploadModal
+        from s3ranger.ui.modals.upload_modal import UploadModal
 
         # Show the upload modal
         def on_upload_result(result: bool) -> None:
@@ -523,10 +533,12 @@ class ObjectList(Static):
 
         # Check if this is the last item in the current directory (excluding parent dir)
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == focused_obj.get("key")
+        is_last_item = len(actual_items) == 1 and actual_items[0].get(
+            "key"
+        ) == focused_obj.get("key")
 
         # Import here to avoid circular imports
-        from s3tui.ui.modals.delete_modal import DeleteModal
+        from s3ranger.ui.modals.delete_modal import DeleteModal
 
         # Show the delete modal
         def on_delete_result(result: bool) -> None:
@@ -562,7 +574,7 @@ class ObjectList(Static):
         is_folder = focused_obj.get("is_folder", False)
 
         # Import here to avoid circular imports
-        from s3tui.ui.modals.rename_modal import RenameModal
+        from s3ranger.ui.modals.rename_modal import RenameModal
 
         # Show the rename modal
         def on_rename_result(result: bool) -> None:
@@ -572,4 +584,6 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)
+        self.app.push_screen(
+            RenameModal(s3_uri, is_folder, self.objects), on_rename_result
+        )

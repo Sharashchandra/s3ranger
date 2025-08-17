@@ -1,4 +1,4 @@
-"""Download modal for S3TUI."""
+"""Download modal for S3Ranger."""
 
 import os
 import threading
@@ -11,8 +11,8 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import SelectDirectory
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.widgets import ProgressWidget
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.widgets import ProgressWidget
 
 FILE_PICKER_DEFAULT_PATH = "~/Downloads/"
 

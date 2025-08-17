@@ -3,7 +3,7 @@ from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widgets import Static
 
-from s3tui.ui.utils import get_current_aws_profile, get_current_endpoint_url
+from s3ranger.ui.utils import get_current_aws_profile, get_current_endpoint_url
 
 
 class TitleBar(Static):
@@ -14,7 +14,7 @@ class TitleBar(Static):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="title-bar-container"):
-            yield Static("S3 Browser", id="title")
+            yield Static("S3 Ranger", id="title")
             with Horizontal(id="status-container"):
                 yield Static("●", id="connected-indicator")
 

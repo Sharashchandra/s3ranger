@@ -936,7 +936,7 @@ wheels = [
 ]
 
 [[package]]
-name = "s3tui"
+name = "s3ranger"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

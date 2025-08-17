@@ -1,4 +1,4 @@
-"""Delete modal for S3TUI."""
+"""Delete modal for S3Ranger."""
 
 import threading
 
@@ -8,8 +8,8 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Static
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.widgets import ProgressWidget
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.widgets import ProgressWidget
 
 
 class DeleteModal(ModalScreen[bool]):
@@ -53,19 +53,32 @@ class DeleteModal(ModalScreen[bool]):
                 # Source field (read-only)
                 with Vertical(classes="field-group"):
                     yield Label("Source (S3)", classes="field-label")
-                    yield Static(self.s3_path, id="source-field", classes="field-value readonly")
-                    item_type = "folder and all its contents" if self.is_folder else "file"
-                    yield Label(f"This {item_type} will be permanently deleted from S3", classes="field-help")
+                    yield Static(
+                        self.s3_path, id="source-field", classes="field-value readonly"
+                    )
+                    item_type = (
+                        "folder and all its contents" if self.is_folder else "file"
+                    )
+                    yield Label(
+                        f"This {item_type} will be permanently deleted from S3",
+                        classes="field-help",
+                    )
 
             # Dialog footer
             with Container(id="delete-dialog-footer"):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
-                            yield Static("[bold white]Ctrl+Enter[/] Delete", classes="keybinding")
+                            yield Static(
+                                "[bold white]Tab[/] Navigate", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+Enter[/] Delete", classes="keybinding"
+                            )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
+                            yield Static(
+                                "[bold white]Esc[/] Cancel", classes="keybinding"
+                            )
 
                     with Vertical(classes="dialog-actions"):
                         yield Button("Cancel", id="cancel-btn")

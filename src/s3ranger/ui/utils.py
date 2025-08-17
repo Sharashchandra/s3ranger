@@ -122,7 +122,7 @@ def get_current_aws_profile() -> str:
     """
     try:
         # Import here to avoid circular import
-        from s3tui.gateways.s3 import S3
+        from s3ranger.gateways.s3 import S3
 
         # If a profile was set via CLI, use that
         cli_profile = S3.get_profile_name()
@@ -150,7 +150,7 @@ def get_current_endpoint_url() -> str | None:
     """
     try:
         # Import here to avoid circular import
-        from s3tui.gateways.s3 import S3
+        from s3ranger.gateways.s3 import S3
 
         return S3.get_endpoint_url()
     except Exception:

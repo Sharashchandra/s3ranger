@@ -8,8 +8,8 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Input, Label, ListItem, ListView, LoadingIndicator, Static
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.widgets.title_bar import TitleBar
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.widgets.title_bar import TitleBar
 
 
 class BucketItem(ListItem):
@@ -196,7 +196,9 @@ class BucketList(Static):
             return self.buckets
 
         filter_lower = self.filter_text.lower()
-        return [bucket for bucket in self.buckets if filter_lower in bucket["name"].lower()]
+        return [
+            bucket for bucket in self.buckets if filter_lower in bucket["name"].lower()
+        ]
 
     def _update_list_display(self) -> None:
         """Update the bucket list display"""
