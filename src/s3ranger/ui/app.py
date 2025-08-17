@@ -1,16 +1,16 @@
-"""Main S3TUI application."""
+"""Main S3Ranger application."""
 
 from textual.app import App
 from textual.binding import Binding
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.screens.main_screen import MainScreen
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.screens.main_screen import MainScreen
 
 
-class S3TUI(App):
+class S3Ranger(App):
     """S3 Terminal UI application."""
 
-    TITLE = "S3 Browser"
+    TITLE = "S3 Ranger"
     CSS_PATH = "app.tcss"
 
     BINDINGS = [
@@ -28,7 +28,7 @@ class S3TUI(App):
         theme: str = "Github Dark",
         **kwargs,
     ):
-        """Initialize the S3TUI app.
+        """Initialize the S3Ranger app.
 
         Args:
             endpoint_url: Custom S3 endpoint URL for S3-compatible services.
@@ -57,7 +57,7 @@ class S3TUI(App):
 
     def register_custom_themes(self) -> None:
         # Import all themes
-        from s3tui.ui.themes import (
+        from s3ranger.ui.themes import (
             dracula_theme,
             github_dark_theme,
             sepia_theme,

@@ -25,7 +25,9 @@ class ProgressWidget(Widget):
 
     def on_mount(self) -> None:
         """Start the bouncing animation when mounted."""
-        self.timer = self.set_interval(0.05, self.update_progress)  # Increased speed (was 0.1)
+        self.timer = self.set_interval(
+            0.05, self.update_progress
+        )  # Increased speed (was 0.1)
 
     def update_progress(self) -> None:
         """Update the bouncing progress bar."""

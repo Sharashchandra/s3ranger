@@ -1,4 +1,4 @@
-"""Configuration management for S3TUI."""
+"""Configuration management for S3Ranger."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,7 +7,7 @@ from typing import Optional
 import toml
 
 ALLOWED_THEMES = ["Github Dark", "Dracula", "Solarized", "Sepia"]
-CONFIG_FILE_PATH = Path.home() / ".s3tui.config"
+CONFIG_FILE_PATH = Path.home() / ".s3ranger.config"
 
 
 @dataclass
@@ -33,13 +33,17 @@ class S3Config:
             raise ValueError("region_name is required when endpoint_url is provided")
 
         # Rule 1: If profile_name is given, do not allow aws_access_key_id, aws_secret_access_key and aws_session_token
-        if self.profile_name and any([self.aws_access_key_id, self.aws_secret_access_key, self.aws_session_token]):
+        if self.profile_name and any(
+            [self.aws_access_key_id, self.aws_secret_access_key, self.aws_session_token]
+        ):
             raise ValueError(
                 "Cannot use profile_name when aws_access_key_id, aws_secret_access_key, or aws_session_token is provided"
             )
 
         # Rule 3: If aws_session_token is given without aws_access_key_id and aws_secret_access_key, it's an error
-        if self.aws_session_token and not (self.aws_access_key_id and self.aws_secret_access_key):
+        if self.aws_session_token and not (
+            self.aws_access_key_id and self.aws_secret_access_key
+        ):
             raise ValueError(
                 "aws_session_token requires both aws_access_key_id and aws_secret_access_key to be provided"
             )
@@ -49,11 +53,15 @@ class S3Config:
         if (self.aws_access_key_id or self.aws_secret_access_key) and not (
             self.aws_access_key_id and self.aws_secret_access_key
         ):
-            raise ValueError("Both aws_access_key_id and aws_secret_access_key are required when providing credentials")
+            raise ValueError(
+                "Both aws_access_key_id and aws_secret_access_key are required when providing credentials"
+            )
 
         # Rule 5: Validate theme (optional and not dependent on other fields)
         if self.theme not in ALLOWED_THEMES:
-            raise ValueError(f"Invalid theme '{self.theme}'. Allowed themes: {', '.join(ALLOWED_THEMES)}")
+            raise ValueError(
+                f"Invalid theme '{self.theme}'. Allowed themes: {', '.join(ALLOWED_THEMES)}"
+            )
 
 
 def load_config(config_file_path: Optional[str] = None) -> S3Config:
@@ -74,7 +82,9 @@ def load_config(config_file_path: Optional[str] = None) -> S3Config:
         valid_fields = {field.name for field in S3Config.__dataclass_fields__.values()}
 
         # Filter config data to only include valid fields
-        filtered_config = {key: value for key, value in config_data.items() if key in valid_fields}
+        filtered_config = {
+            key: value for key, value in config_data.items() if key in valid_fields
+        }
 
         return S3Config(**filtered_config)
 

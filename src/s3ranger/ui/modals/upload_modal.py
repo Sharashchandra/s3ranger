@@ -1,4 +1,4 @@
-"""Upload modal for S3TUI."""
+"""Upload modal for S3Ranger."""
 
 import os
 import threading
@@ -12,8 +12,8 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import FileOpen, SelectDirectory
 
-from s3tui.gateways.s3 import S3
-from s3tui.ui.widgets import ProgressWidget
+from s3ranger.gateways.s3 import S3
+from s3ranger.ui.widgets import ProgressWidget
 
 FILE_PICKER_DEFAULT_PATH = "~/"
 
@@ -62,28 +62,56 @@ class UploadModal(ModalScreen[bool]):
                 with Vertical(classes="field-group"):
                     yield Label("Source", classes="field-label")
                     with Horizontal(classes="input-with-button"):
-                        yield Input(value="~/", placeholder="Enter local source path...", id="source-input")
-                        yield Button("📁", id="file-picker-btn", classes="file-picker-button")
-                    yield Label("Local path to upload from (~ expands to home directory)", classes="field-help")
+                        yield Input(
+                            value="~/",
+                            placeholder="Enter local source path...",
+                            id="source-input",
+                        )
+                        yield Button(
+                            "📁", id="file-picker-btn", classes="file-picker-button"
+                        )
+                    yield Label(
+                        "Local path to upload from (~ expands to home directory)",
+                        classes="field-help",
+                    )
 
                 # Destination field (read-only S3 path)
                 with Vertical(classes="field-group"):
                     yield Label("Destination (S3)", classes="field-label")
-                    yield Static(self.s3_path, id="destination-field", classes="field-value readonly")
-                    yield Label("Files will be uploaded to this S3 location", classes="field-help")
+                    yield Static(
+                        self.s3_path,
+                        id="destination-field",
+                        classes="field-value readonly",
+                    )
+                    yield Label(
+                        "Files will be uploaded to this S3 location",
+                        classes="field-help",
+                    )
 
             # Dialog footer
             with Container(id="upload-dialog-footer"):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
-                            yield Static("[bold white]Ctrl+Enter[/] Upload", classes="keybinding")
+                            yield Static(
+                                "[bold white]Tab[/] Navigate", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+Enter[/] Upload", classes="keybinding"
+                            )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
-                            yield Static("[bold white]Ctrl+O[/] File Picker", classes="keybinding")
+                            yield Static(
+                                "[bold white]Esc[/] Cancel", classes="keybinding"
+                            )
+                            yield Static(
+                                "[bold white]Ctrl+O[/] File Picker",
+                                classes="keybinding",
+                            )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static("[bold white]Ctrl+L[/] Folder Picker", classes="keybinding")
+                            yield Static(
+                                "[bold white]Ctrl+L[/] Folder Picker",
+                                classes="keybinding",
+                            )
 
                     with Vertical(classes="dialog-actions"):
                         yield Button("Cancel", id="cancel-btn")
@@ -175,7 +203,9 @@ class UploadModal(ModalScreen[bool]):
         self.is_uploading = True
 
         # Use threading to upload asynchronously
-        thread = threading.Thread(target=self._upload_async, args=(source,), daemon=True)
+        thread = threading.Thread(
+            target=self._upload_async, args=(source,), daemon=True
+        )
         thread.start()
 
     def _upload_async(self, source: str) -> None:
