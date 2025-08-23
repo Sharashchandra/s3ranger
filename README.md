@@ -17,6 +17,7 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 - 🗑️ **Delete objects and folders** with confirmation prompts
 - ✏️ **Rename files and folders** with conflict detection
 - 🔍 **Filter and search** through buckets
+- 📊 **Sort objects** by name, type, modification date, or size
 - 🎨 **Multiple themes** (GitHub Dark, Dracula, Solarized, Sepia)
 - ⚙️ **Flexible configuration** via CLI arguments, config files, or environment variables
 - 🔐 **Multiple authentication methods** (profiles, access keys, session tokens)
@@ -121,20 +122,21 @@ s3ranger configure
 
 ### Keyboard Shortcuts
 
-| Key      | Action                               |
-| -------- | ------------------------------------ |
-| `Tab`    | Switch between panels                |
-| `Enter`  | Enter bucket/folder or download file |
-| `Ctrl+R` | Refresh current view                 |
-| `Ctrl+F` | Filter/search                        |
-| `Ctrl+H` | Show help modal                      |
-| `Ctrl+Q` | Quit application                     |
-| `Ctrl+P` | Open command palette                 |
-| `U`      | Upload file/folder                   |
-| `D`      | Download selected item               |
-| `Delete` | Delete selected item                 |
-| `Ctrl+K` | Rename selected item                 |
-| `F1`     | Help                                 |
+| Key      | Action                                   |
+| -------- | ---------------------------------------- |
+| `Tab`    | Switch between panels                    |
+| `Enter`  | Enter bucket/folder or download file     |
+| `Ctrl+R` | Refresh current view                     |
+| `Ctrl+F` | Filter/search                            |
+| `Ctrl+S` | Sort objects (by name, type, date, size) |
+| `Ctrl+H` | Show help modal                          |
+| `Ctrl+Q` | Quit application                         |
+| `Ctrl+P` | Open command palette                     |
+| `U`      | Upload file/folder                       |
+| `D`      | Download selected item                   |
+| `Delete` | Delete selected item                     |
+| `Ctrl+K` | Rename selected item                     |
+| `F1`     | Help                                     |
 
 ### Working with S3-Compatible Services
 
