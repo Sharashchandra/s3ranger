@@ -10,10 +10,12 @@ from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 from s3ranger.gateways.s3 import S3
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
+from s3ranger.ui.widgets.sort_overlay import SortOverlay
 
 # Constants
 PARENT_DIR_KEY = ".."
 FILE_ICON = "📄"
+COLUMN_NAMES = ["Name", "Type", "Modified", "Size"]
 
 
 class ObjectItem(ListItem):
@@ -38,9 +40,7 @@ class ObjectItem(ListItem):
 
     def compose(self) -> ComposeResult:
         """Render the object item with its properties in columns."""
-        name_with_icon = self._format_object_name(
-            self.object_info["key"], self.object_info["is_folder"]
-        )
+        name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
         with Horizontal():
             yield Label(name_with_icon, classes="object-key")
             yield Label(self.object_info["type"], classes="object-extension")
@@ -66,6 +66,7 @@ class ObjectList(Static):
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
         Binding("ctrl+k", "rename_item", "Rename"),
+        Binding("ctrl+s", "show_sort_overlay", "Sort"),
     ]
 
     # Reactive properties
@@ -73,10 +74,13 @@ class ObjectList(Static):
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
     is_loading: bool = reactive(False)
+    sort_column: int | None = reactive(None)
+    sort_ascending: bool = reactive(True)
 
     # Private cache for current level objects
     _all_objects: dict = {}
     _on_load_complete_callback: callable = None
+    _unsorted_objects: list[dict] = []  # Cache of unsorted objects
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -236,9 +240,7 @@ class ObjectList(Static):
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
-            objects = S3.list_objects_for_prefix(
-                bucket_name=self.current_bucket, prefix=self.current_prefix
-            )
+            objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
             self.app.call_later(lambda: self._on_objects_loaded(objects))
         except Exception as error:
             # Capture the error explicitly in the closure
@@ -299,9 +301,17 @@ class ObjectList(Static):
         """Filter cached objects to show only those matching the current prefix."""
         if not self._all_objects:
             self.objects = []
+            self._unsorted_objects = []
             return
 
-        self.objects = self._build_ui_objects(self._all_objects)
+        unsorted_objects = self._build_ui_objects(self._all_objects)
+        self._unsorted_objects = unsorted_objects
+
+        # Apply current sorting if any
+        if self.sort_column is not None:
+            self.objects = self._sort_objects(unsorted_objects, self.sort_column, self.sort_ascending)
+        else:
+            self.objects = unsorted_objects
 
     def _build_ui_objects(self, s3_response: dict) -> list[dict]:
         """Transform S3 response into UI-friendly format."""
@@ -533,9 +543,7 @@ class ObjectList(Static):
 
         # Check if this is the last item in the current directory (excluding parent dir)
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get(
-            "key"
-        ) == focused_obj.get("key")
+        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == focused_obj.get("key")
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.delete_modal import DeleteModal
@@ -584,6 +592,147 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(
-            RenameModal(s3_uri, is_folder, self.objects), on_rename_result
-        )
+        self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)
+
+    # Sorting functionality
+    def action_show_sort_overlay(self) -> None:
+        """Show the sort overlay for column selection."""
+
+        def on_sort_result(column_index: int | None) -> None:
+            self._on_sort_selected(column_index)
+            # Always restore focus to the object list after modal closes
+            self.call_later(self.focus_list)
+
+        self.app.push_screen(SortOverlay(object_list=self), on_sort_result)
+
+    def _on_sort_selected(self, column_index: int | None) -> None:
+        """Handle sort column selection."""
+        if column_index is not None:
+            # If the same column is selected, toggle sort direction
+            if self.sort_column == column_index:
+                self.sort_ascending = not self.sort_ascending
+            else:
+                self.sort_column = column_index
+                self.sort_ascending = False  # Start with descending for new columns
+
+            # Apply sorting to current objects
+            self.objects = self._sort_objects(self._unsorted_objects, self.sort_column, self.sort_ascending)
+
+            # Update header to show sort indicator
+            self._update_header_sort_indicators()
+
+    def _update_header_sort_indicators(self) -> None:
+        """Update header labels to show current sort column and direction."""
+        try:
+            header_container = self.query_one("#object-list-header")
+            labels = header_container.query(Label)
+
+            for idx, label in enumerate(labels):
+                if idx < len(COLUMN_NAMES):
+                    base_name = COLUMN_NAMES[idx]
+
+                    if self.sort_column == idx:
+                        indicator = "↑" if self.sort_ascending else "↓"
+                        label.update(f"{base_name} {indicator}")
+                    else:
+                        label.update(base_name)
+        except Exception:
+            # Silently ignore if headers not available
+            pass
+
+    def _sort_objects(self, objects: list[dict], column_index: int, ascending: bool) -> list[dict]:
+        """Sort objects by the specified column."""
+        if not objects or column_index is None:
+            return objects
+
+        # Don't sort parent directory - always keep it at top
+        PARENT_DIR_KEY = ".."
+        parent_dir = [obj for obj in objects if obj.get("key") == PARENT_DIR_KEY]
+        other_objects = [obj for obj in objects if obj.get("key") != PARENT_DIR_KEY]
+
+        if not other_objects:
+            return objects
+
+        # Define sort keys for each column
+        sort_keys = {
+            0: self._get_name_sort_key,  # Name
+            1: self._get_type_sort_key,  # Type
+            2: self._get_modified_sort_key,  # Modified
+            3: self._get_size_sort_key,  # Size
+        }
+
+        sort_key_func = sort_keys.get(column_index)
+        if sort_key_func:
+            try:
+                sorted_objects = sorted(other_objects, key=sort_key_func, reverse=not ascending)
+            except Exception:
+                # Fall back to original order if sorting fails
+                sorted_objects = other_objects
+        else:
+            sorted_objects = other_objects
+
+        return parent_dir + sorted_objects
+
+    def _get_name_sort_key(self, obj: dict) -> tuple:
+        """Get sort key for name column - folders first, then files."""
+        is_folder = obj.get("is_folder", False)
+        name = obj.get("key", "").lower()
+        return (not is_folder, name)  # False (folders) sorts before True (files)
+
+    def _get_type_sort_key(self, obj: dict) -> tuple:
+        """Get sort key for type column."""
+        is_folder = obj.get("is_folder", False)
+        type_str = obj.get("type", "").lower()
+        return (not is_folder, type_str)
+
+    def _get_modified_sort_key(self, obj: dict) -> tuple:
+        """Get sort key for modified column."""
+        is_folder = obj.get("is_folder", False)
+        modified = obj.get("modified", "")
+        # Empty dates (folders) should sort to end when ascending, start when descending
+        if not modified:
+            return (not is_folder, "")
+        return (not is_folder, modified)
+
+    def _get_size_sort_key(self, obj: dict) -> tuple:
+        """Get sort key for size column."""
+        is_folder = obj.get("is_folder", False)
+        if is_folder:
+            return (0, 0)  # Folders have no size, sort first
+
+        size_str = obj.get("size", "")
+        if not size_str:
+            return (1, 0)
+
+        # Parse size string to get numeric value for proper sorting
+        try:
+            # Remove units and convert to bytes for comparison
+            size_bytes = self._parse_size_to_bytes(size_str)
+            return (1, size_bytes)
+        except Exception:
+            return (1, 0)
+
+    def _parse_size_to_bytes(self, size_str: str) -> int:
+        """Parse size string like '1.2 MB' to bytes for sorting."""
+        if not size_str:
+            return 0
+
+        size_str = size_str.strip().upper()
+
+        # Define units with their multipliers
+        units = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3, "TB": 1024**4}
+
+        # Check for unit suffix
+        for unit, multiplier in units.items():
+            if size_str.endswith(unit):
+                number_part = size_str[: -len(unit)].strip()
+                try:
+                    return int(float(number_part) * multiplier)
+                except ValueError:
+                    return 0
+
+        # Try to parse as plain number
+        try:
+            return int(float(size_str))
+        except ValueError:
+            return 0
