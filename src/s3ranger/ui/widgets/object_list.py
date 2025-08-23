@@ -40,7 +40,9 @@ class ObjectItem(ListItem):
 
     def compose(self) -> ComposeResult:
         """Render the object item with its properties in columns."""
-        name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
+        name_with_icon = self._format_object_name(
+            self.object_info["key"], self.object_info["is_folder"]
+        )
         with Horizontal():
             yield Label(name_with_icon, classes="object-key")
             yield Label(self.object_info["type"], classes="object-extension")
@@ -240,7 +242,9 @@ class ObjectList(Static):
     def _load_objects_async(self) -> None:
         """Asynchronously load objects from S3."""
         try:
-            objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
+            objects = S3.list_objects_for_prefix(
+                bucket_name=self.current_bucket, prefix=self.current_prefix
+            )
             self.app.call_later(lambda: self._on_objects_loaded(objects))
         except Exception as error:
             # Capture the error explicitly in the closure
@@ -309,7 +313,9 @@ class ObjectList(Static):
 
         # Apply current sorting if any
         if self.sort_column is not None:
-            self.objects = self._sort_objects(unsorted_objects, self.sort_column, self.sort_ascending)
+            self.objects = self._sort_objects(
+                unsorted_objects, self.sort_column, self.sort_ascending
+            )
         else:
             self.objects = unsorted_objects
 
@@ -543,7 +549,9 @@ class ObjectList(Static):
 
         # Check if this is the last item in the current directory (excluding parent dir)
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == focused_obj.get("key")
+        is_last_item = len(actual_items) == 1 and actual_items[0].get(
+            "key"
+        ) == focused_obj.get("key")
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.delete_modal import DeleteModal
@@ -592,7 +600,9 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)
+        self.app.push_screen(
+            RenameModal(s3_uri, is_folder, self.objects), on_rename_result
+        )
 
     # Sorting functionality
     def action_show_sort_overlay(self) -> None:
@@ -616,7 +626,9 @@ class ObjectList(Static):
                 self.sort_ascending = False  # Start with descending for new columns
 
             # Apply sorting to current objects
-            self.objects = self._sort_objects(self._unsorted_objects, self.sort_column, self.sort_ascending)
+            self.objects = self._sort_objects(
+                self._unsorted_objects, self.sort_column, self.sort_ascending
+            )
 
             # Update header to show sort indicator
             self._update_header_sort_indicators()
@@ -640,7 +652,9 @@ class ObjectList(Static):
             # Silently ignore if headers not available
             pass
 
-    def _sort_objects(self, objects: list[dict], column_index: int, ascending: bool) -> list[dict]:
+    def _sort_objects(
+        self, objects: list[dict], column_index: int, ascending: bool
+    ) -> list[dict]:
         """Sort objects by the specified column."""
         if not objects or column_index is None:
             return objects
@@ -664,7 +678,9 @@ class ObjectList(Static):
         sort_key_func = sort_keys.get(column_index)
         if sort_key_func:
             try:
-                sorted_objects = sorted(other_objects, key=sort_key_func, reverse=not ascending)
+                sorted_objects = sorted(
+                    other_objects, key=sort_key_func, reverse=not ascending
+                )
             except Exception:
                 # Fall back to original order if sorting fails
                 sorted_objects = other_objects
@@ -719,11 +735,17 @@ class ObjectList(Static):
 
         size_str = size_str.strip().upper()
 
-        # Define units with their multipliers
-        units = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3, "TB": 1024**4}
+        # Define units with their multipliers - check longer units first
+        units = [
+            ("TB", 1024**4),
+            ("GB", 1024**3),
+            ("MB", 1024**2),
+            ("KB", 1024),
+            ("B", 1),
+        ]
 
         # Check for unit suffix
-        for unit, multiplier in units.items():
+        for unit, multiplier in units:
             if size_str.endswith(unit):
                 number_part = size_str[: -len(unit)].strip()
                 try:
