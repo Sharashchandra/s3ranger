@@ -914,12 +914,23 @@ ObjectList {
     margin: 0;
 }
 
+/* Header checkbox spacer */
+.object-checkbox-header {
+    color: $foreground;
+    text-style: bold;
+    height: auto;
+    width: 4;
+    min-width: 4;
+    padding: 0;
+    margin: 0 1 0 2;
+}
+
 .object-name-header {
     color: $foreground;
     text-style: bold;
     height: auto;
-    width: 60%;
-    padding-left: 2;
+    width: 55%;
+    padding-left: 0;
     margin: 0;
 }
 
@@ -1047,12 +1058,54 @@ ListView#object-list > ListItem.-highlight .object-size {
     color: $background !important;
 }
 
+/* Checkbox styling - keep visible in all states */
+.object-checkbox {
+    color: $secondary !important;
+}
+
+/* When row is highlighted/focused, use background color for contrast */
+ListView#object-list > ObjectItem.-active .object-checkbox,
+ListView#object-list > ObjectItem:focus .object-checkbox,
+ListView#object-list > ObjectItem.-cursor .object-checkbox,
+ListView#object-list > ObjectItem.-highlight .object-checkbox,
+ListView#object-list > ListItem.-active .object-checkbox,
+ListView#object-list > ListItem:focus .object-checkbox,
+ListView#object-list > ListItem.-cursor .object-checkbox,
+ListView#object-list > ListItem.-highlight .object-checkbox {
+    color: $background !important;
+}
+
+/* Selected items - checkbox in primary color for better visibility */
+ObjectItem.selected .object-checkbox {
+    color: $primary !important;
+}
+
+/* Selected items when highlighted - use background for contrast */
+ListView#object-list > ObjectItem.selected.-active .object-checkbox,
+ListView#object-list > ObjectItem.selected:focus .object-checkbox,
+ListView#object-list > ObjectItem.selected.-cursor .object-checkbox,
+ListView#object-list > ObjectItem.selected.-highlight .object-checkbox {
+    color: $background !important;
+}
+
+/* Object Item Checkbox */
+.object-checkbox {
+    color: $primary;
+    text-style: none;
+    height: auto;
+    width: 4;
+    min-width: 4;
+    padding: 0;
+    margin: 0 1 0 0;
+    background: transparent;
+}
+
 /* Object Item Text Elements */
 .object-key {
     color: $foreground;
     text-style: none;
     height: auto;
-    width: 60%;
+    width: 55%;
     padding: 0 1 0 0;
     margin: 0;
 }
@@ -1082,6 +1135,11 @@ ListView#object-list > ListItem.-highlight .object-size {
     width: 10%;
     padding: 0;
     margin: 0;
+}
+
+/* Selected object item styling */
+ObjectItem.selected .object-checkbox {
+    color: $success;
 }
 
 #breadcrumb-bar {
