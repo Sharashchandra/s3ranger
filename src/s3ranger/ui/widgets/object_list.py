@@ -543,31 +543,16 @@ class ObjectList(Static):
     # Action methods
     def action_download(self) -> None:
         """Download selected items"""
-        # Check if we have multi-selection
-        if self.selected_count > 1:
-            # TODO: Implement multi-file download
-            self.notify(f"Multi-file download coming soon ({self.selected_count} items selected)", severity="warning")
-            return
-
-        # Get the selected object (via checkbox)
+        # Get the selected objects (via checkbox)
         selected_objects = self.get_selected_objects()
         if not selected_objects:
             self.notify("No object selected for download", severity="error")
             return
 
-        selected_obj = selected_objects[0]
         s3_uris = self.get_selected_s3_uris()
         if not s3_uris:
             self.notify("No object selected for download", severity="error")
             return
-
-        s3_uri = s3_uris[0]
-
-        # Determine if it's a folder or file
-        is_folder = selected_obj.get("is_folder", False)
-
-        # Import here to avoid circular imports
-        from s3ranger.ui.modals.download_modal import DownloadModal
 
         # Show the download modal
         def on_download_result(result: bool) -> None:
@@ -577,7 +562,25 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
+        # Check if we have multi-selection
+        if self.selected_count > 1:
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.multi_download_modal import MultiDownloadModal
+
+            # Show the multi-download modal
+            self.app.push_screen(MultiDownloadModal(s3_uris, selected_objects), on_download_result)
+        else:
+            # Single file download
+            selected_obj = selected_objects[0]
+            s3_uri = s3_uris[0]
+
+            # Determine if it's a folder or file
+            is_folder = selected_obj.get("is_folder", False)
+
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.download_modal import DownloadModal
+
+            self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
     def action_upload(self) -> None:
         """Upload files to current location"""
