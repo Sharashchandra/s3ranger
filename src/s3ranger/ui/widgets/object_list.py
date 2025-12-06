@@ -106,7 +106,7 @@ class ObjectList(Static):
         Binding("delete", "delete_item", "Delete"),
         Binding("ctrl+k", "rename_item", "Rename"),
         Binding("ctrl+s", "show_sort_overlay", "Sort"),
-        Binding("space", "toggle_selection", "Select", show=False),
+        Binding("space", "toggle_selection", "Select"),
         Binding("ctrl+a", "select_all", "Select All", show=False),
         Binding("escape", "clear_selection", "Clear Selection", show=False),
     ]
@@ -515,26 +515,6 @@ class ObjectList(Static):
         except Exception:
             return None
 
-    def get_s3_uri_for_focused_object(self) -> str | None:
-        """Get the S3 URI for the currently focused object."""
-        focused_obj = self.get_focused_object()
-        if not focused_obj or not self.current_bucket:
-            return None
-
-        # Handle parent directory case
-        if focused_obj["key"] == "..":
-            return None
-
-        # Construct the full S3 path from breadcrumb (current prefix) + object key
-        if focused_obj["is_folder"]:
-            # For folders, combine current prefix with folder name
-            full_path = f"{self.current_prefix}{focused_obj['key']}/"
-        else:
-            # For files, combine current prefix with file name
-            full_path = f"{self.current_prefix}{focused_obj['key']}"
-
-        return f"s3://{self.current_bucket}/{full_path}"
-
     def get_current_s3_location(self) -> str | None:
         """Get the S3 URI for the current location (bucket + prefix)."""
         if not self.current_bucket:
@@ -569,16 +549,22 @@ class ObjectList(Static):
             self.notify(f"Multi-file download coming soon ({self.selected_count} items selected)", severity="warning")
             return
 
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
-
-        if not s3_uri or not focused_obj:
+        # Get the selected object (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for download", severity="error")
             return
 
+        selected_obj = selected_objects[0]
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for download", severity="error")
+            return
+
+        s3_uri = s3_uris[0]
+
         # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
+        is_folder = selected_obj.get("is_folder", False)
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.download_modal import DownloadModal
@@ -632,20 +618,26 @@ class ObjectList(Static):
             self.notify(f"Multi-file delete coming soon ({self.selected_count} items selected)", severity="warning")
             return
 
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
-
-        if not s3_uri or not focused_obj:
+        # Get the selected object (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for deletion", severity="error")
             return
 
+        selected_obj = selected_objects[0]
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for deletion", severity="error")
+            return
+
+        s3_uri = s3_uris[0]
+
         # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
+        is_folder = selected_obj.get("is_folder", False)
 
         # Check if this is the last item in the current directory (excluding parent dir)
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == focused_obj.get("key")
+        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == selected_obj.get("key")
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.delete_modal import DeleteModal
@@ -672,21 +664,27 @@ class ObjectList(Static):
             self.notify("Rename not available when multiple items are selected", severity="warning")
             return
 
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
-
-        if not s3_uri or not focused_obj:
+        # Get the selected object (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for renaming", severity="error")
             return
 
-        # Don't allow renaming of parent directory entry
-        if focused_obj.get("key") == "..":
+        selected_obj = selected_objects[0]
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for renaming", severity="error")
+            return
+
+        s3_uri = s3_uris[0]
+
+        # Don't allow renaming of parent directory entry (shouldn't happen with checkbox selection)
+        if selected_obj.get("key") == "..":
             self.notify("Cannot rename parent directory entry", severity="error")
             return
 
         # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
+        is_folder = selected_obj.get("is_folder", False)
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.rename_modal import RenameModal
