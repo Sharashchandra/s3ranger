@@ -615,42 +615,27 @@ class ObjectList(Static):
 
     def action_delete_item(self) -> None:
         """Delete selected items"""
-        # Check if we have multi-selection
-        if self.selected_count > 1:
-            # TODO: Implement multi-file delete
-            self.notify(f"Multi-file delete coming soon ({self.selected_count} items selected)", severity="warning")
-            return
-
-        # Get the selected object (via checkbox)
+        # Get the selected objects (via checkbox)
         selected_objects = self.get_selected_objects()
         if not selected_objects:
             self.notify("No object selected for deletion", severity="error")
             return
 
-        selected_obj = selected_objects[0]
         s3_uris = self.get_selected_s3_uris()
         if not s3_uris:
             self.notify("No object selected for deletion", severity="error")
             return
 
-        s3_uri = s3_uris[0]
-
-        # Determine if it's a folder or file
-        is_folder = selected_obj.get("is_folder", False)
-
-        # Check if this is the last item in the current directory (excluding parent dir)
+        # Check if this would delete all items in the current directory
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get("key") == selected_obj.get("key")
-
-        # Import here to avoid circular imports
-        from s3ranger.ui.modals.delete_modal import DeleteModal
+        deleting_all = len(selected_objects) >= len(actual_items)
 
         # Show the delete modal
         def on_delete_result(result: bool) -> None:
             if result:
                 # Delete was successful
-                if is_last_item and self.current_prefix:
-                    # This was the last item and we're not at bucket root, navigate up
+                if deleting_all and self.current_prefix:
+                    # All items were deleted and we're not at bucket root, navigate up
                     self._navigate_up()
                 else:
                     # Just refresh the view normally
@@ -658,7 +643,25 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
+        # Check if we have multi-selection
+        if self.selected_count > 1:
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.multi_delete_modal import MultiDeleteModal
+
+            # Show the multi-delete modal
+            self.app.push_screen(MultiDeleteModal(s3_uris, selected_objects), on_delete_result)
+        else:
+            # Single file delete
+            selected_obj = selected_objects[0]
+            s3_uri = s3_uris[0]
+
+            # Determine if it's a folder or file
+            is_folder = selected_obj.get("is_folder", False)
+
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.delete_modal import DeleteModal
+
+            self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
 
     def action_rename_item(self) -> None:
         """Rename selected item"""
