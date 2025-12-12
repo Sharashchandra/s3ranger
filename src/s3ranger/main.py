@@ -12,7 +12,8 @@ from typing import Any, Dict
 import click
 
 from s3ranger import __version__
-from s3ranger.config import CONFIG_FILE_PATH, load_config, merge_config_with_cli_args
+from s3ranger.config import CONFIG_FILE_PATH, load_config
+from s3ranger.credentials import resolve_credentials
 from s3ranger.ui.app import S3Ranger
 
 # Constants
@@ -57,57 +58,14 @@ def _configure_s3_settings(existing_config: Dict[str, Any]) -> Dict[str, Any]:
 
     config = {}
 
-    # Endpoint URL
-    current = existing_config.get("endpoint_url", "")
-    endpoint_url = _prompt_for_value(
-        "Endpoint URL (for S3-compatible services like MinIO)", current
-    )
-    if endpoint_url:
-        config["endpoint_url"] = endpoint_url
-
-    # Region Name
-    current = existing_config.get("region_name", "")
-    region_name = _prompt_for_value("AWS Region Name", current)
-    if region_name:
-        config["region_name"] = region_name
-
     # Profile Name
     current = existing_config.get("profile_name", "")
     profile_name = _prompt_for_value("AWS Profile Name", current)
     if profile_name:
         config["profile_name"] = profile_name
 
-    return config, profile_name
-
-
-def _configure_aws_credentials(existing_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Configure AWS credentials."""
-    click.echo()
-    click.echo(
-        "AWS Credentials (leave empty if using profile or environment variables):"
-    )
-
-    config = {}
-
-    # Access Key ID
-    current = existing_config.get("aws_access_key_id", "")
-    access_key = _prompt_for_value("AWS Access Key ID", current)
-    if access_key:
-        config["aws_access_key_id"] = access_key
-
-    # Secret Access Key
-    current = existing_config.get("aws_secret_access_key", "")
-    secret_key = _prompt_for_value("AWS Secret Access Key", current, hide_input=True)
-    if secret_key:
-        config["aws_secret_access_key"] = secret_key
-
-    # Session Token
-    current = existing_config.get("aws_session_token", "")
-    session_token = _prompt_for_value("AWS Session Token (optional)", current)
-    if session_token:
-        config["aws_session_token"] = session_token
-
     return config
+
 
 
 def _configure_theme(existing_config: Dict[str, Any]) -> str:
@@ -198,28 +156,24 @@ def _create_s3ranger_app(config_obj) -> S3Ranger:
     type=str,
     help="AWS profile name to use for authentication",
     default=None,
-    envvar="AWS_PROFILE",
 )
 @click.option(
     "--aws-access-key-id",
     type=str,
     help="AWS access key ID for authentication",
     default=None,
-    envvar="AWS_ACCESS_KEY_ID",
 )
 @click.option(
     "--aws-secret-access-key",
     type=str,
     help="AWS secret access key for authentication",
     default=None,
-    envvar="AWS_SECRET_ACCESS_KEY",
 )
 @click.option(
     "--aws-session-token",
     type=str,
     help="AWS session token for temporary credentials",
     default=None,
-    envvar="AWS_SESSION_TOKEN",
 )
 @click.option(
     "--theme",
@@ -285,12 +239,7 @@ def configure(config: str | None = None):
     existing_config = _load_existing_config(config_path)
 
     # Configure S3 settings
-    s3_config, profile_name = _configure_s3_settings(existing_config)
-
-    # Configure AWS credentials (only if no profile is set)
-    if not profile_name:
-        aws_config = _configure_aws_credentials(existing_config)
-        s3_config.update(aws_config)
+    s3_config = _configure_s3_settings(existing_config)
 
     # Configure theme
     s3_config["theme"] = _configure_theme(existing_config)
@@ -314,22 +263,39 @@ def main(
         # Load configuration from file
         config_obj = load_config(config)
 
-        # Merge with CLI arguments (CLI takes priority)
-        config_obj = merge_config_with_cli_args(
-            config_obj,
-            endpoint_url=endpoint_url,
-            region_name=region_name,
-            profile_name=profile_name,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            aws_session_token=aws_session_token,
-            theme=theme,
+        # Resolve credentials following strict priority order:
+        # 1. CLI access key + secret key (highest priority)
+        # 2. CLI profile name
+        # 3. Config file profile name
+        # 4. Error if nothing provided
+        resolved_creds = resolve_credentials(
+            cli_access_key=aws_access_key_id,
+            cli_secret_key=aws_secret_access_key,
+            cli_session_token=aws_session_token,
+            cli_profile=profile_name,
+            config_profile=config_obj.profile_name,
         )
+
+        # endpoint_url and region_name only come from CLI
+        # Default region to us-east-1 when endpoint_url is provided
+        final_region_name = region_name
+        if endpoint_url and not final_region_name:
+            final_region_name = "us-east-1"
+        final_theme = theme or config_obj.theme
+
     except ValueError as e:
         raise click.ClickException(str(e))
 
     # Create and run the application
-    app = _create_s3ranger_app(config_obj)
+    app = S3Ranger(
+        endpoint_url=endpoint_url,
+        region_name=final_region_name,
+        profile_name=resolved_creds.profile_name,
+        aws_access_key_id=resolved_creds.aws_access_key_id,
+        aws_secret_access_key=resolved_creds.aws_secret_access_key,
+        aws_session_token=resolved_creds.aws_session_token,
+        theme=final_theme,
+    )
     app.run()
 
 
