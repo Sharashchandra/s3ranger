@@ -1,8 +1,6 @@
 from collections import namedtuple
 from urllib.parse import urlparse
 
-import boto3
-
 
 def build_s3_uri(bucket_name: str, object_key: str = "") -> str:
     """Build an S3 URI from bucket and object key."""
@@ -52,7 +50,7 @@ def extract_identifier_from_id(item_id: str, prefix: str) -> str | None:
     """
     if item_id and item_id.startswith(prefix):
         return item_id[len(prefix) :]
-    return None
+    return
 
 
 def format_file_size(size: int) -> str:
@@ -118,25 +116,22 @@ def get_current_aws_profile() -> str:
     """Get the current AWS profile name.
 
     Returns:
-        The name of the current AWS profile
+        The name of the current AWS profile, or 'custom' if using CLI credentials.
     """
     try:
         # Import here to avoid circular import
         from s3ranger.gateways.s3 import S3
 
-        # If a profile was set via CLI, use that
+        # If a profile was explicitly set, use that
         cli_profile = S3.get_profile_name()
         if cli_profile:
             return cli_profile
 
-        # Otherwise, get the current session profile
-        session = boto3.session.Session()
-        profiles = session.available_profiles
-        if profiles:
-            # If a profile is set via environment or config, use that
-            # Otherwise, return the first available profile
-            current_profile = session.profile_name or profiles[0]
-            return current_profile
+        # If using CLI credentials (access key + secret key) without a profile, return 'custom'
+        if S3.is_using_cli_credentials():
+            return "custom"
+
+        # Otherwise, return 'default'
         return "default"
     except Exception:
         return "default"
@@ -145,6 +140,10 @@ def get_current_aws_profile() -> str:
 def get_current_endpoint_url() -> str | None:
     """Get the current S3 endpoint URL or None if using default AWS S3.
 
+    Checks in order:
+    1. Endpoint URL set via CLI/s3ranger config
+    2. Endpoint URL from ~/.aws/config for the current profile
+
     Returns:
         The current S3 endpoint URL or None if using default AWS S3.
     """
@@ -152,6 +151,34 @@ def get_current_endpoint_url() -> str | None:
         # Import here to avoid circular import
         from s3ranger.gateways.s3 import S3
 
-        return S3.get_endpoint_url()
+        # First check if endpoint was set via CLI or s3ranger config
+        endpoint_url = S3.get_endpoint_url()
+        if endpoint_url:
+            return endpoint_url
+
+        # Otherwise, try to read from ~/.aws/config for the current profile
+        import configparser
+        from pathlib import Path
+
+        aws_config_path = Path.home() / ".aws" / "config"
+        if not aws_config_path.exists():
+            return
+
+        config = configparser.ConfigParser()
+        config.read(aws_config_path)
+
+        # Get current profile name
+        profile_name = get_current_aws_profile()
+
+        # AWS config uses "profile <name>" section format, except for "default"
+        if profile_name == "default":
+            section_name = "default"
+        else:
+            section_name = f"profile {profile_name}"
+
+        if section_name in config:
+            return config[section_name].get("endpoint_url")
+
+        return
     except Exception:
-        return None
+        return

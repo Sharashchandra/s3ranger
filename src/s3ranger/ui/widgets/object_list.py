@@ -506,19 +506,19 @@ class ObjectList(Static):
         try:
             list_view = self.query_one("#object-list", ListView)
             if list_view.index is None or not self.objects:
-                return None
+                return
 
             focused_index = list_view.index
             if 0 <= focused_index < len(self.objects):
                 return self.objects[focused_index]
-            return None
+            return
         except Exception:
-            return None
+            return
 
     def get_current_s3_location(self) -> str | None:
         """Get the S3 URI for the current location (bucket + prefix)."""
         if not self.current_bucket:
-            return None
+            return
 
         # Construct S3 URI for current location
         if self.current_prefix:

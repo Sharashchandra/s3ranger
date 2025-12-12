@@ -80,6 +80,15 @@ class S3:
         cls._aws_session_token = aws_session_token
 
     @classmethod
+    def is_using_cli_credentials(cls) -> bool:
+        """Check if CLI credentials are being used instead of a profile.
+
+        Returns:
+            True if using explicit CLI credentials, False otherwise.
+        """
+        return bool(cls._aws_access_key_id and cls._aws_secret_access_key)
+
+    @classmethod
     def _run_aws_cli_command(cls, command_args: list[str]) -> str:
         """Run an AWS CLI command with proper error handling.
 
@@ -145,37 +154,58 @@ class S3:
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not kwargs.get("client"):
-                # Create a new S3 client if not provided
-                client_kwargs = {"service_name": "s3"}
-                if S3._endpoint_url:
-                    client_kwargs["endpoint_url"] = S3._endpoint_url
-                if S3._region_name:
-                    client_kwargs["region_name"] = S3._region_name
+                # Environment variables that boto3 reads for credentials
+                # We temporarily unset these to prevent boto3 from auto-reading them
+                aws_env_vars = [
+                    "AWS_ACCESS_KEY_ID",
+                    "AWS_SECRET_ACCESS_KEY",
+                    "AWS_SESSION_TOKEN",
+                    "AWS_PROFILE",
+                    "AWS_DEFAULT_PROFILE",
+                ]
 
-                # Create session with credentials following boto3 precedence order:
-                # 1. Explicit credentials (highest priority)
-                # 2. Profile name
-                # 3. Environment variables (handled automatically by boto3)
-                # 4. Shared credential files (handled automatically by boto3)
+                # Save and unset AWS env vars
+                saved_env = {}
+                for var in aws_env_vars:
+                    if var in os.environ:
+                        saved_env[var] = os.environ.pop(var)
 
-                session_kwargs = {}
+                try:
+                    # Create a new S3 client if not provided
+                    client_kwargs = {"service_name": "s3"}
+                    if S3._endpoint_url:
+                        client_kwargs["endpoint_url"] = S3._endpoint_url
+                    if S3._region_name:
+                        client_kwargs["region_name"] = S3._region_name
 
-                # Check if explicit credentials are provided (highest priority)
-                if S3._aws_access_key_id and S3._aws_secret_access_key:
-                    session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
-                    session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
-                    if S3._aws_session_token:
-                        session_kwargs["aws_session_token"] = S3._aws_session_token
-                # Otherwise, use profile if specified
-                elif S3._profile_name:
-                    session_kwargs["profile_name"] = S3._profile_name
+                    # Create session with credentials following boto3 precedence order:
+                    # 1. Explicit credentials (highest priority)
+                    # 2. Profile name
+                    # 3. Environment variables (handled automatically by boto3)
+                    # 4. Shared credential files (handled automatically by boto3)
 
-                # If region is specified, add it to session (this can also be set via environment/config)
-                if S3._region_name:
-                    session_kwargs["region_name"] = S3._region_name
+                    session_kwargs = {}
 
-                session = boto3.Session(**session_kwargs)
-                kwargs["client"] = session.client(**client_kwargs)
+                    # Check if explicit credentials are provided (highest priority)
+                    if S3._aws_access_key_id and S3._aws_secret_access_key:
+                        session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
+                        session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
+                        if S3._aws_session_token:
+                            session_kwargs["aws_session_token"] = S3._aws_session_token
+                    # Otherwise, use profile if specified
+                    elif S3._profile_name:
+                        session_kwargs["profile_name"] = S3._profile_name
+
+                    # If region is specified, add it to session (this can also be set via environment/config)
+                    if S3._region_name:
+                        session_kwargs["region_name"] = S3._region_name
+
+                    session = boto3.Session(**session_kwargs)
+                    kwargs["client"] = session.client(**client_kwargs)
+                finally:
+                    # Restore env vars
+                    os.environ.update(saved_env)
+
             return func(*args, **kwargs)
 
         return wrapper
