@@ -128,9 +128,7 @@ class S3:
             command.extend(["--profile", cls._profile_name])
 
         try:
-            result = subprocess.run(
-                command, env=env, capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
             return result.stdout
         except subprocess.CalledProcessError as e:
             raise RuntimeError(e.stderr)
@@ -232,17 +230,43 @@ class S3:
 
     @get_client
     @staticmethod
-    def list_buckets(client: boto3.client, *, prefix: str = None) -> list[dict]:
-        """List all S3 buckets."""
-        print(f"Listing S3 buckets with prefix '{prefix or ''}'")
-        paginator = client.get_paginator("list_buckets")
-        response_iterator = paginator.paginate(Prefix=prefix or "")
+    def list_buckets(
+        client: boto3.client,
+        *,
+        prefix: str = None,
+        max_buckets: int = None,
+        continuation_token: str = None,
+    ) -> dict:
+        """List S3 buckets with optional pagination and prefix filtering.
 
-        buckets = []
-        for response in response_iterator:
-            buckets.extend(response.get("Buckets", []))
+        Args:
+            client: The boto3 S3 client (injected by decorator).
+            prefix: Optional prefix to filter bucket names.
+            max_buckets: Maximum number of buckets to return per page.
+            continuation_token: Token for fetching the next page of results.
 
-        return response.get("Buckets", [])
+        Returns:
+            dict with keys:
+                - buckets: List of bucket dictionaries
+                - continuation_token: Token for next page (None if no more pages)
+        """
+        print(f"Listing S3 buckets with prefix '{prefix or ''}', max_buckets={max_buckets}")
+
+        # Build request parameters
+        request_params = {}
+        if prefix:
+            request_params["Prefix"] = prefix
+        if max_buckets:
+            request_params["MaxBuckets"] = max_buckets
+        if continuation_token:
+            request_params["ContinuationToken"] = continuation_token
+
+        response = client.list_buckets(**request_params)
+
+        return {
+            "buckets": response.get("Buckets", []),
+            "continuation_token": response.get("ContinuationToken"),
+        }
 
     @get_client
     @resolve_s3_uri
@@ -268,14 +292,10 @@ class S3:
     @get_client
     @resolve_s3_uri
     @staticmethod
-    def list_objects_for_prefix(
-        client: boto3.client, *, bucket_name: str, prefix: str | None = None
-    ) -> list[dict]:
+    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> list[dict]:
         """List objects in a bucket for a specific prefix."""
         paginator = client.get_paginator("list_objects_v2")
-        response_iterator = paginator.paginate(
-            Bucket=bucket_name, Prefix=prefix or "", Delimiter="/"
-        )
+        response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "", Delimiter="/")
 
         print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}'")
         objects = {}
@@ -305,16 +325,12 @@ class S3:
         else:
             key = prefix
 
-        print(
-            f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
-        )
+        print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
         client.upload_file(local_file_path, bucket_name, key)
 
     @resolve_s3_uri
     @staticmethod
-    def upload_directory(
-        *, local_dir_path: str, bucket_name: str, prefix: str = None
-    ) -> None:
+    def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str = None) -> None:
         """Upload a directory to S3."""
         local_dir_path = local_dir_path.rstrip("/")
         if not os.path.isdir(local_dir_path):
@@ -354,9 +370,7 @@ class S3:
                 relative_path = os.path.relpath(local_file_path, local_dir_path)
                 key = f"{prefix}{relative_path.replace(os.sep, '/')}"
 
-                print(
-                    f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
-                )
+                print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
                 client.upload_file(local_file_path, bucket_name, key)
 
     # -------------------------Download------------------------- #
@@ -388,9 +402,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def download_directory(
-        *, bucket_name: str, prefix: str = None, local_dir_path: str = None
-    ) -> None:
+    def download_directory(*, bucket_name: str, prefix: str = None, local_dir_path: str = None) -> None:
         """Download a directory from S3."""
         if not local_dir_path:
             local_dir_path = os.getcwd()
@@ -506,12 +518,8 @@ class S3:
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
         for response in response_iterator:
             if "Contents" in response:
-                objects_to_delete = [
-                    {"Key": obj["Key"]} for obj in response["Contents"]
-                ]
-                client.delete_objects(
-                    Bucket=bucket_name, Delete={"Objects": objects_to_delete}
-                )
+                objects_to_delete = [{"Key": obj["Key"]} for obj in response["Contents"]]
+                client.delete_objects(Bucket=bucket_name, Delete={"Objects": objects_to_delete})
 
     # -------------------------Move------------------------- #
 
