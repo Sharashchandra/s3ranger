@@ -8,6 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3ranger.gateways.s3 import S3
+from s3ranger.ui.constants import OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
 from s3ranger.ui.widgets.sort_overlay import SortOverlay
@@ -116,6 +117,8 @@ class ObjectList(Static):
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
     is_loading: bool = reactive(False)
+    is_loading_more: bool = reactive(False)  # Loading more (pagination) state
+    has_more_objects: bool = reactive(False)  # Whether more objects are available
     sort_column: int | None = reactive(None)
     sort_ascending: bool = reactive(True)
     selected_count: int = reactive(0)  # Track number of selected items
@@ -125,6 +128,15 @@ class ObjectList(Static):
     _on_load_complete_callback: callable = None
     _unsorted_objects: list[dict] = []  # Cache of unsorted objects
     _selected_keys: set = set()  # Track selected object keys
+
+    # Pagination state
+    _continuation_token: str | None = None  # Token for next page
+    _all_loaded_files: list[dict] = []  # All files loaded so far
+    _all_loaded_folders: list[dict] = []  # All folders loaded so far
+    _loaded_keys: set = set()  # Set of loaded keys (for deduplication)
+    _is_fetching: bool = False  # Prevent duplicate fetch requests
+    _preserve_position_on_update: bool = False  # Preserve scroll position on next list update
+    _saved_scroll_position: int | None = None  # Saved position for restoration after loading more
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -181,12 +193,78 @@ class ObjectList(Static):
                 yield Label("Size", classes="object-size-header")
             yield LoadingIndicator(id="object-loading")
             yield ListView(id="object-list")
+            yield Static("Loading more...", id="object-loading-more")
 
     def on_mount(self) -> None:
         """Initialize the widget when mounted."""
-        pass
+        # Initialize internal state
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self._is_fetching = False
+        self._preserve_position_on_update = False
+        self._saved_scroll_position = None
+
+        # Hide the loading more indicator initially
+        try:
+            loading_more = self.query_one("#object-loading-more", Static)
+            loading_more.display = False
+        except Exception:
+            pass
+
+        # Set up scroll monitoring for mouse scroll pagination
+        self._setup_scroll_monitoring()
+
+    def _setup_scroll_monitoring(self) -> None:
+        """Set up monitoring of scroll position for mouse-based pagination"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            # Watch for scroll changes on the list view
+            self.watch(list_view, "scroll_y", self._on_list_scroll_change, init=False)
+        except Exception:
+            pass
+
+    def _on_list_scroll_change(self, scroll_y: float) -> None:
+        """Called when the list view scroll position changes"""
+        self._check_scroll_for_pagination()
 
     # Event handlers
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Handle list item highlight for infinite scroll detection"""
+        if event.item is None:
+            return
+
+        # Check if we're near the bottom of the list
+        self._check_scroll_for_pagination()
+
+    def _check_scroll_for_pagination(self) -> None:
+        """Check if we should load more objects based on scroll position"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            total_items = len(list_view.children)
+
+            if total_items == 0:
+                return
+
+            # Calculate which items are visible based on scroll position
+            # Each item has a height, we check if bottom items are near visible
+            scroll_y = list_view.scroll_y
+            max_scroll = list_view.max_scroll_y
+
+            # If we're near the bottom of the scroll area (within 20% of max scroll)
+            # or if we have few items and they're all visible
+            near_bottom = max_scroll == 0 or (max_scroll > 0 and scroll_y >= max_scroll * 0.8)
+
+            # Also check by index if highlight is active
+            current_index = list_view.index
+            near_bottom_by_index = current_index is not None and (total_items - current_index <= SCROLL_THRESHOLD_ITEMS)
+
+            if (near_bottom or near_bottom_by_index) and self.has_more_objects and not self._is_fetching:
+                self._load_more_objects()
+        except Exception:
+            pass
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle object selection"""
         if isinstance(event.item, ObjectItem):
@@ -212,12 +290,18 @@ class ObjectList(Static):
 
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
-        self._update_list_display()
+        preserve = self._preserve_position_on_update
+        self._preserve_position_on_update = False  # Reset flag
+        self._update_list_display(preserve_position=preserve)
         # Focus is handled in _on_objects_loaded
 
     def watch_is_loading(self, is_loading: bool) -> None:
         """React to loading state changes."""
         self._update_loading_state(is_loading)
+
+    def watch_is_loading_more(self, is_loading_more: bool) -> None:
+        """React to loading more state changes."""
+        self._update_loading_more_state(is_loading_more)
 
     # Public methods
     def set_bucket(self, bucket_name: str) -> None:
@@ -295,63 +379,173 @@ class ObjectList(Static):
         except Exception:
             pass
 
-    def _update_list_display(self) -> None:
-        """Populate the list view with object items."""
+    def _update_list_display(self, preserve_position: bool = False) -> None:
+        """Populate the list view with object items.
+
+        Args:
+            preserve_position: If True, only append new items instead of rebuilding
+        """
         try:
             list_view = self.query_one("#object-list", ListView)
-            list_view.clear()
 
-            # Add all objects to the list view
-            for obj in self.objects:
-                list_view.append(ObjectItem(obj))
+            if preserve_position:
+                # When preserving position (loading more), only append new items
+                # This keeps existing items and their highlight state intact
+                existing_keys = {child.object_key for child in list_view.children if isinstance(child, ObjectItem)}
+                for obj in self.objects:
+                    if obj["key"] not in existing_keys:
+                        list_view.append(ObjectItem(obj))
+            else:
+                # Full rebuild for initial load or navigation
+                list_view.clear()
+                for obj in self.objects:
+                    list_view.append(ObjectItem(obj))
+
+            # Clear saved position after use
+            self._saved_scroll_position = None
         except Exception:
-            # Silent failure if list view isn't ready yet
-            pass
+            self._saved_scroll_position = None
 
     def _load_bucket_objects(self) -> None:
-        """Load objects from the current S3 bucket prefix."""
+        """Load objects from the current S3 bucket prefix (initial load)."""
         if not self.current_bucket:
             self._clear_objects()
             return
 
+        # Reset pagination state for fresh load
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
+        self._is_fetching = True
+
         # Start asynchronous loading
-        thread = threading.Thread(target=self._load_objects_async, daemon=True)
+        thread = threading.Thread(
+            target=self._fetch_objects,
+            args=(None, False),  # No continuation token, not loading more
+            daemon=True,
+        )
         thread.start()
 
-    def _load_objects_async(self) -> None:
-        """Asynchronously load objects from S3."""
+    def _load_more_objects(self) -> None:
+        """Load more objects (pagination) - triggered by infinite scroll."""
+        if self._is_fetching or not self.has_more_objects or not self._continuation_token:
+            return
+
+        # Save current scroll position BEFORE starting async operation
         try:
-            objects = S3.list_objects_for_prefix(bucket_name=self.current_bucket, prefix=self.current_prefix)
-            self.app.call_later(lambda: self._on_objects_loaded(objects))
+            list_view = self.query_one("#object-list", ListView)
+            self._saved_scroll_position = list_view.index
+        except Exception:
+            self._saved_scroll_position = None
+
+        self.is_loading_more = True
+        self._is_fetching = True
+        thread = threading.Thread(
+            target=self._fetch_objects,
+            args=(self._continuation_token, True),  # With token, loading more
+            daemon=True,
+        )
+        thread.start()
+
+    def _fetch_objects(self, continuation_token: str | None = None, is_loading_more: bool = False) -> None:
+        """Fetch objects from S3 in background thread.
+
+        Args:
+            continuation_token: Token for fetching next page of results
+            is_loading_more: Whether this is a pagination load (vs initial load)
+        """
+        try:
+            response = S3.list_objects_for_prefix_paginated(
+                bucket_name=self.current_bucket,
+                prefix=self.current_prefix,
+                max_keys=OBJECT_LIST_PAGE_SIZE,
+                continuation_token=continuation_token,
+            )
+            files = response["files"]
+            folders = response["folders"]
+            next_token = response["continuation_token"]
+
+            # Capture values for closure
+            self.app.call_later(lambda: self._on_objects_loaded(files, folders, next_token, is_loading_more))
         except Exception as error:
-            # Capture the error explicitly in the closure
-            def report_error(err=error):
-                self._on_objects_error(err)
+            # Capture exception in closure for thread safety
+            captured_error = error
+            captured_is_loading_more = is_loading_more
+            self.app.call_later(lambda: self._on_objects_error(captured_error, captured_is_loading_more))
 
-            self.app.call_later(report_error)
+    def _on_objects_loaded(
+        self,
+        files: list[dict],
+        folders: list[dict],
+        next_token: str | None = None,
+        is_loading_more: bool = False,
+    ) -> None:
+        """Handle successful objects loading.
 
-    def _on_objects_loaded(self, objects: dict) -> None:
-        """Handle successful objects loading."""
-        self._all_objects = objects
-        self._filter_objects_by_prefix()
+        Args:
+            files: List of file objects
+            folders: List of folder prefixes
+            next_token: Continuation token for next page
+            is_loading_more: Whether this was a pagination load
+        """
+        self._is_fetching = False
 
-        # Calculate delay based on number of objects (more objects = longer delay)
-        obj_count = len(self.objects)
-        focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
+        # Add new folders to loaded set (for deduplication)
+        for folder in folders:
+            prefix = folder.get("Prefix", "")
+            if prefix not in self._loaded_keys:
+                self._loaded_keys.add(prefix)
+                self._all_loaded_folders.append(folder)
 
-        # First stop loading
-        self.is_loading = False
+        # Add new files to loaded set (for deduplication)
+        for file in files:
+            key = file.get("Key", "")
+            if key not in self._loaded_keys:
+                self._loaded_keys.add(key)
+                self._all_loaded_files.append(file)
 
-        # Then schedule focus with a calculated delay based on object count
-        self.set_timer(focus_delay, self._focus_first_item)
+        # Update pagination state
+        self._continuation_token = next_token
+        self.has_more_objects = next_token is not None
+
+        # Build the objects for display
+        # Set flag to preserve position when loading more (pagination)
+        self._preserve_position_on_update = is_loading_more
+        self._build_and_set_objects()
+
+        # Update loading states
+        if is_loading_more:
+            self.is_loading_more = False
+        else:
+            self.is_loading = False
+
+            # Calculate delay based on number of objects (more objects = longer delay)
+            obj_count = len(self.objects)
+            focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
+
+            # Schedule focus with a calculated delay based on object count
+            self.set_timer(focus_delay, self._focus_first_item)
 
         self._execute_completion_callback()
 
-    def _on_objects_error(self, error: Exception) -> None:
-        """Handle objects loading error."""
-        self._clear_objects()
-        self.is_loading = False
+    def _on_objects_error(self, error: Exception, is_loading_more: bool = False) -> None:
+        """Handle objects loading error.
+
+        Args:
+            error: The exception that occurred
+            is_loading_more: Whether this was a pagination load
+        """
+        self._is_fetching = False
         self.notify(f"Error loading bucket objects: {error}", severity="error")
+
+        # For pagination errors, keep existing objects
+        if is_loading_more:
+            self.is_loading_more = False
+        else:
+            self._clear_objects()
+            self.is_loading = False
 
         self._execute_completion_callback()
 
@@ -365,6 +559,11 @@ class ObjectList(Static):
     def _clear_objects(self) -> None:
         """Reset object state when no data is available."""
         self._all_objects = {}
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
         self.objects = []
         self.is_loading = False
         self._selected_keys.clear()
@@ -378,6 +577,46 @@ class ObjectList(Static):
             list_view.display = False
         except Exception:
             # ListView might not be available yet, silently ignore
+            pass
+
+    def _build_and_set_objects(self) -> None:
+        """Build UI objects from loaded files and folders and set the objects property."""
+        ui_objects = []
+
+        # Add parent directory navigation if in a subfolder
+        if self.current_prefix:
+            ui_objects.append(self._create_parent_dir_object())
+
+        # Add folders
+        for folder in self._all_loaded_folders:
+            prefix = folder.get("Prefix", "")
+            # Extract folder name by removing the current prefix and trailing slash
+            folder_name = prefix[len(self.current_prefix) :].rstrip("/")
+            if folder_name:  # Only add if we get a valid folder name
+                ui_objects.append(self._create_folder_object(folder_name))
+
+        # Add files
+        for s3_object in self._all_loaded_files:
+            key = s3_object.get("Key", "")
+            # Extract filename by removing the current prefix
+            filename = key[len(self.current_prefix) :]
+            if filename:  # Only add if we get a valid filename
+                ui_objects.append(self._create_file_object(filename, s3_object))
+
+        self._unsorted_objects = ui_objects
+
+        # Apply current sorting if any
+        if self.sort_column is not None:
+            self.objects = self._sort_objects(ui_objects, self.sort_column, self.sort_ascending)
+        else:
+            self.objects = ui_objects
+
+    def _update_loading_more_state(self, is_loading_more: bool) -> None:
+        """Update UI elements based on loading more state."""
+        try:
+            loading_more = self.query_one("#object-loading-more", Static)
+            loading_more.display = is_loading_more
+        except Exception:
             pass
 
     def _filter_objects_by_prefix(self) -> None:
@@ -499,6 +738,12 @@ class ObjectList(Static):
         self._selected_keys.clear()
         self.selected_count = 0
         self.is_loading = True
+        # Reset pagination state for new navigation
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
 
     # Utility methods
     def get_focused_object(self) -> dict | None:

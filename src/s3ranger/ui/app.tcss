@@ -157,6 +157,17 @@ BucketList {
     display: none;
 }
 
+#bucket-loading-more {
+    height: auto;
+    width: 100%;
+    content-align: center middle;
+    background: $surface;
+    color: $secondary;
+    text-style: italic;
+    padding: 0 1;
+    display: none;
+}
+
 /* ====================================
  * BUCKET ITEM COMPONENT
  * ==================================== */
@@ -1008,6 +1019,17 @@ ObjectList {
     border: none;
     margin: 0;
     padding: 0;
+}
+
+#object-loading-more {
+    height: auto;
+    width: 100%;
+    content-align: center middle;
+    background: $surface;
+    color: $secondary;
+    text-style: italic;
+    padding: 0 1;
+    display: none;
 }
 
 /* Object Item Component (ListView Item) */
