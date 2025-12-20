@@ -81,16 +81,8 @@ class CredentialChain:
             result = resolver.resolve(context)
             if result:
                 return result
-        # No credentials provided - use default profile with warning
-        import click
 
-        click.echo(
-            click.style(
-                "Warning: No credentials provided. Using profile_name 'default'.",
-                fg="yellow",
-            )
-        )
-        return ResolvedCredentials(profile_name="default", source="default")
+        return ResolvedCredentials(source="default")
 
 
 def resolve_credentials(
