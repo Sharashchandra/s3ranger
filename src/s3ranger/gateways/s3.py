@@ -307,6 +307,55 @@ class S3:
 
         return objects
 
+    @get_client
+    @resolve_s3_uri
+    @staticmethod
+    def list_objects_for_prefix_paginated(
+        client: boto3.client,
+        *,
+        bucket_name: str,
+        prefix: str | None = None,
+        max_keys: int = None,
+        continuation_token: str = None,
+    ) -> dict:
+        """List objects in a bucket for a specific prefix with pagination support.
+
+        Args:
+            client: The boto3 S3 client (injected by decorator).
+            bucket_name: The name of the S3 bucket.
+            prefix: Optional prefix to filter objects.
+            max_keys: Maximum number of keys (files + folders) to return per page.
+            continuation_token: Token for fetching the next page of results.
+
+        Returns:
+            dict with keys:
+                - files: List of file objects
+                - folders: List of folder prefixes
+                - continuation_token: Token for next page (None if no more pages)
+        """
+        print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}', max_keys={max_keys}")
+
+        # Build request parameters
+        request_params = {
+            "Bucket": bucket_name,
+            "Prefix": prefix or "",
+            "Delimiter": "/",
+        }
+        if max_keys:
+            request_params["MaxKeys"] = max_keys
+        if continuation_token:
+            request_params["ContinuationToken"] = continuation_token
+
+        response = client.list_objects_v2(**request_params)
+
+        result = {
+            "files": response.get("Contents", []),
+            "folders": response.get("CommonPrefixes", []),
+            "continuation_token": response.get("NextContinuationToken"),
+        }
+
+        return result
+
     # -------------------------Upload------------------------- #
 
     @get_client

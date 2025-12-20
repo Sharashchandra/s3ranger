@@ -11,8 +11,8 @@ from textual.widgets import Input, Label, ListItem, ListView, LoadingIndicator, 
 
 from s3ranger.gateways.s3 import S3
 from s3ranger.ui.constants import (
+    BUCKET_FILTER_DEBOUNCE_MS,
     BUCKET_LIST_PAGE_SIZE,
-    FILTER_DEBOUNCE_MS,
     SCROLL_THRESHOLD_ITEMS,
 )
 from s3ranger.ui.widgets.title_bar import TitleBar
@@ -508,7 +508,7 @@ class BucketList(Static):
 
         # Schedule new filter request after debounce delay
         self._filter_debounce_timer = Timer(
-            FILTER_DEBOUNCE_MS / 1000.0,  # Convert ms to seconds
+            BUCKET_FILTER_DEBOUNCE_MS / 1000.0,  # Convert ms to seconds
             self._trigger_server_filter,
         )
         self._filter_debounce_timer.start()

@@ -1021,6 +1021,17 @@ ObjectList {
     padding: 0;
 }
 
+#object-loading-more {
+    height: auto;
+    width: 100%;
+    content-align: center middle;
+    background: $surface;
+    color: $secondary;
+    text-style: italic;
+    padding: 0 1;
+    display: none;
+}
+
 /* Object Item Component (ListView Item) */
 ObjectItem {
     height: auto;
