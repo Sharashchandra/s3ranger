@@ -213,6 +213,22 @@ class ObjectList(Static):
         except Exception:
             pass
 
+        # Set up scroll monitoring for mouse scroll pagination
+        self._setup_scroll_monitoring()
+
+    def _setup_scroll_monitoring(self) -> None:
+        """Set up monitoring of scroll position for mouse-based pagination"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            # Watch for scroll changes on the list view
+            self.watch(list_view, "scroll_y", self._on_list_scroll_change, init=False)
+        except Exception:
+            pass
+
+    def _on_list_scroll_change(self, scroll_y: float) -> None:
+        """Called when the list view scroll position changes"""
+        self._check_scroll_for_pagination()
+
     # Event handlers
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Handle list item highlight for infinite scroll detection"""
@@ -220,17 +236,31 @@ class ObjectList(Static):
             return
 
         # Check if we're near the bottom of the list
+        self._check_scroll_for_pagination()
+
+    def _check_scroll_for_pagination(self) -> None:
+        """Check if we should load more objects based on scroll position"""
         try:
             list_view = self.query_one("#object-list", ListView)
-            current_index = list_view.index
             total_items = len(list_view.children)
 
-            # If within threshold of the bottom and there are more objects to load
-            if (
-                total_items - current_index <= SCROLL_THRESHOLD_ITEMS
-                and self.has_more_objects
-                and not self._is_fetching
-            ):
+            if total_items == 0:
+                return
+
+            # Calculate which items are visible based on scroll position
+            # Each item has a height, we check if bottom items are near visible
+            scroll_y = list_view.scroll_y
+            max_scroll = list_view.max_scroll_y
+
+            # If we're near the bottom of the scroll area (within 20% of max scroll)
+            # or if we have few items and they're all visible
+            near_bottom = max_scroll == 0 or (max_scroll > 0 and scroll_y >= max_scroll * 0.8)
+
+            # Also check by index if highlight is active
+            current_index = list_view.index
+            near_bottom_by_index = current_index is not None and (total_items - current_index <= SCROLL_THRESHOLD_ITEMS)
+
+            if (near_bottom or near_bottom_by_index) and self.has_more_objects and not self._is_fetching:
                 self._load_more_objects()
         except Exception:
             pass
