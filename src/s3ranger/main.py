@@ -94,6 +94,24 @@ def _configure_theme(existing_config: Dict[str, Any]) -> str:
     return THEME_CHOICES[theme_choice - 1]
 
 
+def _configure_pagination(existing_config: Dict[str, Any]) -> bool:
+    """Configure pagination setting."""
+    click.echo()
+    click.echo("Performance Configuration:")
+    click.echo("-" * 24)
+
+    current = existing_config.get("enable_pagination", True)
+    current_str = "enabled" if current else "disabled"
+    click.echo(f"Current pagination: {current_str}")
+
+    enable = click.confirm(
+        "Enable pagination? (loads items incrementally as you scroll)",
+        default=current,
+    )
+
+    return enable
+
+
 def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None:
     """Validate and save the configuration."""
     click.echo()
@@ -244,6 +262,9 @@ def configure(config: str | None = None):
     # Configure theme
     s3_config["theme"] = _configure_theme(existing_config)
 
+    # Configure pagination
+    s3_config["enable_pagination"] = _configure_pagination(existing_config)
+
     # Validate and save configuration
     _validate_and_save_config(s3_config, config_path)
 
@@ -282,6 +303,7 @@ def main(
         if endpoint_url and not final_region_name:
             final_region_name = "us-east-1"
         final_theme = theme or config_obj.theme
+        enable_pagination = config_obj.enable_pagination
 
     except ValueError as e:
         raise click.ClickException(str(e))
@@ -295,6 +317,7 @@ def main(
         aws_secret_access_key=resolved_creds.aws_secret_access_key,
         aws_session_token=resolved_creds.aws_session_token,
         theme=final_theme,
+        enable_pagination=enable_pagination,
     )
     app.run()
 

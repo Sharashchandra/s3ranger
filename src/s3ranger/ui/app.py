@@ -26,6 +26,7 @@ class S3Ranger(App):
         aws_secret_access_key: str = None,
         aws_session_token: str = None,
         theme: str = "Github Dark",
+        enable_pagination: bool = True,
         **kwargs,
     ):
         """Initialize the S3Ranger app.
@@ -38,6 +39,7 @@ class S3Ranger(App):
             aws_secret_access_key: AWS secret access key for authentication.
             aws_session_token: AWS session token for temporary credentials.
             theme: Theme name to use for the UI.
+            enable_pagination: Whether to use pagination for loading items.
         """
         super().__init__(**kwargs)
         self.endpoint_url = endpoint_url
@@ -48,6 +50,7 @@ class S3Ranger(App):
         self.aws_session_token = aws_session_token
         self.selected_theme = theme
         self.current_theme_index = 0
+        self.enable_pagination = enable_pagination
 
         # Set the endpoint URL, region, profile, and credentials globally for the S3 class
         S3.set_endpoint_url(endpoint_url)

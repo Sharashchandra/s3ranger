@@ -126,6 +126,10 @@ class BucketList(Static):
 
     def _check_scroll_for_pagination(self) -> None:
         """Check if we should load more buckets based on scroll position"""
+        # Skip if pagination is disabled
+        if not getattr(self.app, 'enable_pagination', True):
+            return
+
         try:
             list_view = self.query_one("#bucket-list-view", ListView)
             total_items = len(list_view.children)
@@ -278,8 +282,12 @@ class BucketList(Static):
             is_loading_more: Whether this is a pagination load (vs initial load)
         """
         try:
+            # Use page size only if pagination is enabled
+            enable_pagination = getattr(self.app, 'enable_pagination', True)
+            max_buckets = BUCKET_LIST_PAGE_SIZE if enable_pagination else None
+
             response = S3.list_buckets(
-                max_buckets=BUCKET_LIST_PAGE_SIZE,
+                max_buckets=max_buckets,
                 continuation_token=continuation_token,
             )
             raw_buckets = response["buckets"]

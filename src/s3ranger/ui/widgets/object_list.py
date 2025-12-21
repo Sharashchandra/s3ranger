@@ -240,6 +240,10 @@ class ObjectList(Static):
 
     def _check_scroll_for_pagination(self) -> None:
         """Check if we should load more objects based on scroll position"""
+        # Skip if pagination is disabled
+        if not getattr(self.app, 'enable_pagination', True):
+            return
+
         try:
             list_view = self.query_one("#object-list", ListView)
             total_items = len(list_view.children)
@@ -457,10 +461,14 @@ class ObjectList(Static):
             is_loading_more: Whether this is a pagination load (vs initial load)
         """
         try:
+            # Use page size only if pagination is enabled
+            enable_pagination = getattr(self.app, 'enable_pagination', True)
+            max_keys = OBJECT_LIST_PAGE_SIZE if enable_pagination else None
+
             response = S3.list_objects_for_prefix_paginated(
                 bucket_name=self.current_bucket,
                 prefix=self.current_prefix,
-                max_keys=OBJECT_LIST_PAGE_SIZE,
+                max_keys=max_keys,
                 continuation_token=continuation_token,
             )
             files = response["files"]

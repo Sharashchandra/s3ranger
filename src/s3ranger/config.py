@@ -16,6 +16,7 @@ class S3Config:
 
     profile_name: Optional[str] = None
     theme: str = "Github Dark"
+    enable_pagination: bool = True
 
     def __post_init__(self):
         """Validate configuration after initialization."""
