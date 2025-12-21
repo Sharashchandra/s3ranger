@@ -19,12 +19,12 @@ class S3Ranger(App):
 
     def __init__(
         self,
-        endpoint_url: str = None,
-        region_name: str = None,
-        profile_name: str = None,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        aws_session_token: str = None,
+        endpoint_url: str | None = None,
+        region_name: str | None = None,
+        profile_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
         theme: str = "Github Dark",
         enable_pagination: bool = True,
         **kwargs,
