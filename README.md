@@ -167,6 +167,10 @@ profile_name = "default"
 
 # UI Configuration
 theme = "Github Dark"
+
+# Performance
+# Set to false to load all items at once instead of using pagination
+# enable_pagination = true
 ```
 
 ### Environment Variables
