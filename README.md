@@ -34,16 +34,14 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 pip install s3ranger
 ```
 
-### Using pipx (recommended for CLI tools)
-
-```bash
-pipx install s3ranger
-```
-
 ### Using uv
 
 ```bash
-uv add s3ranger
+# Install s3ranger globally
+uv tool install s3ranger@latest
+
+# Update to latest version
+uv tool upgrade s3ranger
 ```
 
 ### From source
