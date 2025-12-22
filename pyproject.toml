@@ -1,6 +1,6 @@
 [project]
 name = "s3ranger"
-version = "1.1.0"
+version = "1.2.0"
 description = "A terminal-based user interface for browsing and managing AWS S3 buckets and objects"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -48,6 +48,7 @@ dev = [
     "pre-commit>=4.2.0",
     "ruff>=0.12.7",
     "textual-dev>=1.7.0",
+    "ty>=0.0.5",
 ]
 
 [[tool.uv.index]]
