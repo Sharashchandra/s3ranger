@@ -53,12 +53,8 @@ class DeleteModal(ModalScreen[bool]):
                 # Source field (read-only)
                 with Vertical(classes="field-group"):
                     yield Label("Source (S3)", classes="field-label")
-                    yield Static(
-                        self.s3_path, id="source-field", classes="field-value readonly"
-                    )
-                    item_type = (
-                        "folder and all its contents" if self.is_folder else "file"
-                    )
+                    yield Static(self.s3_path, id="source-field", classes="field-value readonly")
+                    item_type = "folder and all its contents" if self.is_folder else "file"
                     yield Label(
                         f"This {item_type} will be permanently deleted from S3",
                         classes="field-help",
@@ -69,16 +65,10 @@ class DeleteModal(ModalScreen[bool]):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Tab[/] Navigate", classes="keybinding"
-                            )
-                            yield Static(
-                                "[bold white]Ctrl+Enter[/] Delete", classes="keybinding"
-                            )
+                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
+                            yield Static("[bold white]Ctrl+Enter[/] Delete", classes="keybinding")
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Esc[/] Cancel", classes="keybinding"
-                            )
+                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
 
                     with Vertical(classes="dialog-actions"):
                         yield Button("Cancel", id="cancel-btn")
@@ -86,17 +76,12 @@ class DeleteModal(ModalScreen[bool]):
 
     def on_mount(self) -> None:
         """Called when the modal is mounted."""
-        # Debug: Check what s3_path we have
-        print(f"DEBUG: Delete modal s3_path = '{self.s3_path}'")
-
         # Update the source field with the actual s3_path
         source_field = self.query_one("#source-field", Static)
         if self.s3_path:
             source_field.update(self.s3_path)
-            print(f"DEBUG: Updated source field with: '{self.s3_path}'")
         else:
             source_field.update("No path provided")
-            print("DEBUG: No s3_path provided")
         source_field.refresh()
 
     def watch_is_deleting(self, is_deleting: bool) -> None:
