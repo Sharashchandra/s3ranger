@@ -199,6 +199,8 @@ s3ranger configure
 | `--aws-session-token`     | AWS session token (CLI only, optional) | `--aws-session-token token123`                                     |
 | `--theme`                 | UI theme                               | `--theme "github dark"`                                            |
 | `--config`                | Configuration file path                | `--config ~/.s3ranger.config`                                      |
+| `--enable-pagination`     | Enable pagination (default)            | `--enable-pagination`                                              |
+| `--disable-pagination`    | Disable pagination                     | `--disable-pagination`                                             |
 
 ### Keyboard Shortcuts
 
