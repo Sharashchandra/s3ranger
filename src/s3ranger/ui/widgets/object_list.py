@@ -124,7 +124,6 @@ class ObjectList(Static):
     selected_count: int = reactive(0)  # Track number of selected items
 
     # Private cache for current level objects
-    _all_objects: dict = {}
     _on_load_complete_callback: callable = None
     _unsorted_objects: list[dict] = []  # Cache of unsorted objects
     _selected_keys: set = set()  # Track selected object keys
@@ -241,7 +240,7 @@ class ObjectList(Static):
     def _check_scroll_for_pagination(self) -> None:
         """Check if we should load more objects based on scroll position"""
         # Skip if pagination is disabled
-        if not getattr(self.app, 'enable_pagination', True):
+        if not getattr(self.app, "enable_pagination", True):
             return
 
         try:
@@ -462,7 +461,7 @@ class ObjectList(Static):
         """
         try:
             # Use page size only if pagination is enabled
-            enable_pagination = getattr(self.app, 'enable_pagination', True)
+            enable_pagination = getattr(self.app, "enable_pagination", True)
             max_keys = OBJECT_LIST_PAGE_SIZE if enable_pagination else None
 
             response = S3.list_objects_for_prefix_paginated(
@@ -566,7 +565,6 @@ class ObjectList(Static):
 
     def _clear_objects(self) -> None:
         """Reset object state when no data is available."""
-        self._all_objects = {}
         self._all_loaded_files = []
         self._all_loaded_folders = []
         self._loaded_keys = set()
@@ -626,50 +624,6 @@ class ObjectList(Static):
             loading_more.display = is_loading_more
         except Exception:
             pass
-
-    def _filter_objects_by_prefix(self) -> None:
-        """Filter cached objects to show only those matching the current prefix."""
-        if not self._all_objects:
-            self.objects = []
-            self._unsorted_objects = []
-            return
-
-        unsorted_objects = self._build_ui_objects(self._all_objects)
-        self._unsorted_objects = unsorted_objects
-
-        # Apply current sorting if any
-        if self.sort_column is not None:
-            self.objects = self._sort_objects(unsorted_objects, self.sort_column, self.sort_ascending)
-        else:
-            self.objects = unsorted_objects
-
-    def _build_ui_objects(self, s3_response: dict) -> list[dict]:
-        """Transform S3 response into UI-friendly format."""
-        ui_objects = []
-
-        # Add parent directory navigation if in a subfolder
-        if self.current_prefix:
-            ui_objects.append(self._create_parent_dir_object())
-
-        # Add folders from the response
-        folders = s3_response.get("folders", [])
-        for folder in folders:
-            prefix = folder["Prefix"]
-            # Extract folder name by removing the current prefix and trailing slash
-            folder_name = prefix[len(self.current_prefix) :].rstrip("/")
-            if folder_name:  # Only add if we get a valid folder name
-                ui_objects.append(self._create_folder_object(folder_name))
-
-        # Add files from the response
-        files = s3_response.get("files", [])
-        for s3_object in files:
-            key = s3_object["Key"]
-            # Extract filename by removing the current prefix
-            filename = key[len(self.current_prefix) :]
-            if filename:  # Only add if we get a valid filename
-                ui_objects.append(self._create_file_object(filename, s3_object))
-
-        return ui_objects
 
     def _create_parent_dir_object(self) -> dict:
         """Create the parent directory (..) object."""

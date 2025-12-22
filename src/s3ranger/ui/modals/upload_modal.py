@@ -67,9 +67,7 @@ class UploadModal(ModalScreen[bool]):
                             placeholder="Enter local source path...",
                             id="source-input",
                         )
-                        yield Button(
-                            "📁", id="file-picker-btn", classes="file-picker-button"
-                        )
+                        yield Button("📁", id="file-picker-btn", classes="file-picker-button")
                     yield Label(
                         "Local path to upload from (~ expands to home directory)",
                         classes="field-help",
@@ -93,16 +91,10 @@ class UploadModal(ModalScreen[bool]):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Tab[/] Navigate", classes="keybinding"
-                            )
-                            yield Static(
-                                "[bold white]Ctrl+Enter[/] Upload", classes="keybinding"
-                            )
+                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
+                            yield Static("[bold white]Ctrl+Enter[/] Upload", classes="keybinding")
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Esc[/] Cancel", classes="keybinding"
-                            )
+                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
                             yield Static(
                                 "[bold white]Ctrl+O[/] File Picker",
                                 classes="keybinding",
@@ -119,17 +111,12 @@ class UploadModal(ModalScreen[bool]):
 
     def on_mount(self) -> None:
         """Called when the modal is mounted."""
-        # Debug: Check what s3_path we have
-        print(f"DEBUG: Modal s3_path = '{self.s3_path}'")
-
         # Update the destination field with the actual s3_path
         destination_field = self.query_one("#destination-field", Static)
         if self.s3_path:
             destination_field.update(self.s3_path)
-            print(f"DEBUG: Updated destination field with: '{self.s3_path}'")
         else:
             destination_field.update("No path provided")
-            print("DEBUG: No s3_path provided")
         destination_field.refresh()
 
         # Focus the source input and set its value
@@ -203,9 +190,7 @@ class UploadModal(ModalScreen[bool]):
         self.is_uploading = True
 
         # Use threading to upload asynchronously
-        thread = threading.Thread(
-            target=self._upload_async, args=(source,), daemon=True
-        )
+        thread = threading.Thread(target=self._upload_async, args=(source,), daemon=True)
         thread.start()
 
     def _upload_async(self, source: str) -> None:

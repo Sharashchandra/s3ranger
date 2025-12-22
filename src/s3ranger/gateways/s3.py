@@ -17,7 +17,7 @@ class S3:
     _aws_session_token = None
 
     @classmethod
-    def set_endpoint_url(cls, endpoint_url: str = None) -> None:
+    def set_endpoint_url(cls, endpoint_url: str | None = None) -> None:
         """Set the S3 endpoint URL for all S3 operations.
 
         Args:
@@ -26,7 +26,7 @@ class S3:
         cls._endpoint_url = endpoint_url
 
     @classmethod
-    def set_region_name(cls, region_name: str = None) -> None:
+    def set_region_name(cls, region_name: str | None = None) -> None:
         """Set the AWS region name for all S3 operations.
 
         Args:
@@ -35,7 +35,7 @@ class S3:
         cls._region_name = region_name
 
     @classmethod
-    def set_profile_name(cls, profile_name: str = None) -> None:
+    def set_profile_name(cls, profile_name: str | None = None) -> None:
         """Set the AWS profile name for all S3 operations.
 
         Args:
@@ -64,9 +64,9 @@ class S3:
     @classmethod
     def set_credentials(
         cls,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        aws_session_token: str = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
     ) -> None:
         """Set the AWS credentials for all S3 operations.
 
@@ -213,9 +213,9 @@ class S3:
         @wraps(func)
         def wrapper(
             *args,
-            s3_uri: str = None,
-            bucket_name: str = None,
-            prefix: str = None,
+            s3_uri: str | None = None,
+            bucket_name: str | None = None,
+            prefix: str | None = None,
             **kwargs,
         ):
             if not s3_uri and not bucket_name:
@@ -233,9 +233,9 @@ class S3:
     def list_buckets(
         client: boto3.client,
         *,
-        prefix: str = None,
-        max_buckets: int = None,
-        continuation_token: str = None,
+        prefix: str | None = None,
+        max_buckets: int | None = None,
+        continuation_token: str | None = None,
     ) -> dict:
         """List S3 buckets with optional pagination and prefix filtering.
 
@@ -275,7 +275,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> list[dict]:
         """List objects in a bucket with optional prefix."""
         paginator = client.get_paginator("list_objects_v2")
@@ -292,7 +292,7 @@ class S3:
     @get_client
     @resolve_s3_uri
     @staticmethod
-    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> list[dict]:
+    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> dict:
         """List objects in a bucket for a specific prefix."""
         paginator = client.get_paginator("list_objects_v2")
         response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "", Delimiter="/")
@@ -315,8 +315,8 @@ class S3:
         *,
         bucket_name: str,
         prefix: str | None = None,
-        max_keys: int = None,
-        continuation_token: str = None,
+        max_keys: int | None = None,
+        continuation_token: str | None = None,
     ) -> dict:
         """List objects in a bucket for a specific prefix with pagination support.
 
@@ -366,7 +366,7 @@ class S3:
         *,
         local_file_path: str,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Upload a file to S3."""
         if not prefix or prefix.endswith("/"):
@@ -379,7 +379,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str = None) -> None:
+    def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str | None = None) -> None:
         """Upload a directory to S3."""
         local_dir_path = local_dir_path.rstrip("/")
         if not os.path.isdir(local_dir_path):
@@ -407,7 +407,7 @@ class S3:
         *,
         local_dir_path: str,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Upload a directory to S3."""
         if not os.path.isdir(local_dir_path):
@@ -451,7 +451,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def download_directory(*, bucket_name: str, prefix: str = None, local_dir_path: str = None) -> None:
+    def download_directory(*, bucket_name: str, prefix: str | None = None, local_dir_path: str | None = None) -> None:
         """Download a directory from S3."""
         if not local_dir_path:
             local_dir_path = os.getcwd()
@@ -494,7 +494,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
         local_dir_path: str = ".",
     ) -> None:
         """Download a directory from S3."""
@@ -541,7 +541,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def delete_directory(*, bucket_name: str, prefix: str = None) -> None:
+    def delete_directory(*, bucket_name: str, prefix: str | None = None) -> None:
         """Delete a directory from S3."""
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
 
@@ -558,7 +558,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Delete a directory from S3."""
         paginator = client.get_paginator("list_objects_v2")

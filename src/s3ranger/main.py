@@ -38,9 +38,7 @@ def _load_existing_config(config_path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _prompt_for_value(
-    prompt_text: str, current_value: str = "", hide_input: bool = False
-) -> str:
+def _prompt_for_value(prompt_text: str, current_value: str = "", hide_input: bool = False) -> str:
     """Helper function to prompt for a configuration value."""
     return click.prompt(
         prompt_text,
@@ -67,7 +65,6 @@ def _configure_s3_settings(existing_config: Dict[str, Any]) -> Dict[str, Any]:
     return config
 
 
-
 def _configure_theme(existing_config: Dict[str, Any]) -> str:
     """Configure theme selection."""
     click.echo()
@@ -81,9 +78,7 @@ def _configure_theme(existing_config: Dict[str, Any]) -> str:
         marker = " (current)" if theme == current_theme else ""
         click.echo(f"  {i}. {theme}{marker}")
 
-    default_choice = (
-        THEME_CHOICES.index(current_theme) + 1 if current_theme in THEME_CHOICES else 1
-    )
+    default_choice = THEME_CHOICES.index(current_theme) + 1 if current_theme in THEME_CHOICES else 1
 
     theme_choice = click.prompt(
         "Select theme (1-4)",
@@ -138,19 +133,6 @@ def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None
         click.echo(f"✓ Configuration saved to {config_path}")
     except Exception as e:
         click.echo(f"✗ Failed to save configuration: {e}")
-
-
-def _create_s3ranger_app(config_obj) -> S3Ranger:
-    """Create and return an S3Ranger application instance."""
-    return S3Ranger(
-        endpoint_url=config_obj.endpoint_url,
-        region_name=config_obj.region_name,
-        profile_name=config_obj.profile_name,
-        aws_access_key_id=config_obj.aws_access_key_id,
-        aws_secret_access_key=config_obj.aws_secret_access_key,
-        aws_session_token=config_obj.aws_session_token,
-        theme=config_obj.theme,
-    )
 
 
 @click.group(invoke_without_command=True)
@@ -247,9 +229,7 @@ def configure(config: str | None = None):
 
     click.echo("S3Ranger Configuration Setup")
     click.echo("=" * 30)
-    click.echo(
-        "Press Space and Enter without typing anything to remove an existing value."
-    )
+    click.echo("Press Space and Enter without typing anything to remove an existing value.")
     click.echo("Leave fields empty to use defaults or skip optional settings.")
     click.echo()
 

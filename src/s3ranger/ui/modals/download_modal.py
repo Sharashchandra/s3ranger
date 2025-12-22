@@ -59,9 +59,7 @@ class DownloadModal(ModalScreen[bool]):
                 # Source field (read-only)
                 with Vertical(classes="field-group"):
                     yield Label("Source (S3)", classes="field-label")
-                    yield Static(
-                        self.s3_path, id="source-field", classes="field-value readonly"
-                    )
+                    yield Static(self.s3_path, id="source-field", classes="field-value readonly")
                     yield Label(
                         "Files will be downloaded from this S3 location",
                         classes="field-help",
@@ -76,9 +74,7 @@ class DownloadModal(ModalScreen[bool]):
                             placeholder="Enter local destination path...",
                             id="destination-input",
                         )
-                        yield Button(
-                            "📁", id="file-picker-btn", classes="file-picker-button"
-                        )
+                        yield Button("📁", id="file-picker-btn", classes="file-picker-button")
                     yield Label(
                         "Local path where files will be saved (~ expands to home directory)",
                         classes="field-help",
@@ -89,17 +85,13 @@ class DownloadModal(ModalScreen[bool]):
                 with Horizontal(classes="footer-content"):
                     with Vertical(classes="keybindings-section"):
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Tab[/] Navigate", classes="keybinding"
-                            )
+                            yield Static("[bold white]Tab[/] Navigate", classes="keybinding")
                             yield Static(
                                 "[bold white]Ctrl+Enter[/] Download",
                                 classes="keybinding",
                             )
                         with Horizontal(classes="dialog-keybindings-row"):
-                            yield Static(
-                                "[bold white]Esc[/] Cancel", classes="keybinding"
-                            )
+                            yield Static("[bold white]Esc[/] Cancel", classes="keybinding")
                             yield Static(
                                 "[bold white]Ctrl+O[/] Open File Picker",
                                 classes="keybinding",
@@ -111,17 +103,12 @@ class DownloadModal(ModalScreen[bool]):
 
     def on_mount(self) -> None:
         """Called when the modal is mounted."""
-        # Debug: Check what s3_path we have
-        print(f"DEBUG: Modal s3_path = '{self.s3_path}'")
-
         # Update the source field with the actual s3_path
         source_field = self.query_one("#source-field", Static)
         if self.s3_path:
             source_field.update(self.s3_path)
-            print(f"DEBUG: Updated source field with: '{self.s3_path}'")
         else:
             source_field.update("No path provided")
-            print("DEBUG: No s3_path provided")
         source_field.refresh()
 
         # Focus the destination input and set its value
@@ -189,9 +176,7 @@ class DownloadModal(ModalScreen[bool]):
         self.is_downloading = True
 
         # Use threading to download asynchronously
-        thread = threading.Thread(
-            target=self._download_async, args=(destination,), daemon=True
-        )
+        thread = threading.Thread(target=self._download_async, args=(destination,), daemon=True)
         thread.start()
 
     def _download_async(self, destination: str) -> None:
