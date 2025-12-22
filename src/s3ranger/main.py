@@ -187,6 +187,12 @@ def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None
     help="Path to configuration file (default: ~/.s3ranger.config)",
     default=None,
 )
+@click.option(
+    "--enable-pagination/--disable-pagination",
+    is_flag=True,
+    default=None,
+    help="Enable or disable pagination (loads items incrementally as you scroll)",
+)
 def cli(
     ctx: click.Context,
     endpoint_url: str | None = None,
@@ -197,6 +203,7 @@ def cli(
     aws_session_token: str | None = None,
     theme: str | None = None,
     config: str | None = None,
+    enable_pagination: bool | None = None,
 ):
     """S3 Terminal UI - Browse and manage S3 buckets and objects."""
     if ctx.invoked_subcommand is None:
@@ -210,6 +217,7 @@ def cli(
             aws_session_token=aws_session_token,
             theme=theme,
             config=config,
+            enable_pagination=enable_pagination,
         )
 
 
@@ -258,6 +266,7 @@ def main(
     aws_session_token: str | None = None,
     theme: str | None = None,
     config: str | None = None,
+    enable_pagination: bool | None = None,
 ):
     """S3 Terminal UI - Browse and manage S3 buckets and objects."""
     try:
@@ -283,7 +292,8 @@ def main(
         if endpoint_url and not final_region_name:
             final_region_name = "us-east-1"
         final_theme = theme or config_obj.theme
-        enable_pagination = config_obj.enable_pagination
+        # CLI enable_pagination takes precedence over config (None means not specified)
+        final_enable_pagination = enable_pagination if enable_pagination is not None else config_obj.enable_pagination
 
     except ValueError as e:
         raise click.ClickException(str(e))
@@ -297,7 +307,7 @@ def main(
         aws_secret_access_key=resolved_creds.aws_secret_access_key,
         aws_session_token=resolved_creds.aws_session_token,
         theme=final_theme,
-        enable_pagination=enable_pagination,
+        enable_pagination=final_enable_pagination,
     )
     app.run()
 
