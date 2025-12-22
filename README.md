@@ -3,10 +3,12 @@
 A terminal-based user interface for browsing and managing AWS S3 buckets and objects. Built with Python and [Textual](https://textual.textualize.io/), s3ranger provides an intuitive way to interact with S3 storage directly from your terminal.
 
 ![s3ranger Screenshot](pics/main_screen.png)
-![s3ranger Screenshot](pics/download.png)
-![s3ranger Screenshot](pics/upload.png)
-![s3ranger Screenshot](pics/delete.png)
 ![s3ranger Screenshot](pics/rename.png)
+![s3ranger Screenshot](pics/upload.png)
+![s3ranger Screenshot](pics/download.png)
+![s3ranger Screenshot](pics/multi_download.png)
+![s3ranger Screenshot](pics/delete.png)
+![s3ranger Screenshot](pics/multi_delete.png)
 
 ## Features
 
