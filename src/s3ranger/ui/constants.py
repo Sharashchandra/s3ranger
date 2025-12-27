@@ -1,3 +1,6 @@
+# Download directory constant
+DEFAULT_DOWNLOAD_DIRECTORY = "~/Downloads/"
+
 # Pagination constants
 BUCKET_LIST_PAGE_SIZE = 250  # Number of buckets to load per page
 OBJECT_LIST_PAGE_SIZE = 25  # Number of objects to load per page

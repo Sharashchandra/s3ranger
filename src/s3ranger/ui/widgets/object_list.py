@@ -8,7 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3ranger.gateways.s3 import S3
-from s3ranger.ui.constants import OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
+from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY, OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
 from s3ranger.ui.widgets.sort_overlay import SortOverlay
@@ -774,8 +774,15 @@ class ObjectList(Static):
             # Import here to avoid circular imports
             from s3ranger.ui.modals.multi_download_modal import MultiDownloadModal
 
+            # Get download directory and warning from app
+            download_directory = getattr(self.app, "download_directory", DEFAULT_DOWNLOAD_DIRECTORY)
+            download_directory_warning = getattr(self.app, "download_directory_warning", None)
+
             # Show the multi-download modal
-            self.app.push_screen(MultiDownloadModal(s3_uris, selected_objects), on_download_result)
+            self.app.push_screen(
+                MultiDownloadModal(s3_uris, selected_objects, download_directory, download_directory_warning),
+                on_download_result,
+            )
         else:
             # Single file download
             selected_obj = selected_objects[0]
@@ -787,7 +794,14 @@ class ObjectList(Static):
             # Import here to avoid circular imports
             from s3ranger.ui.modals.download_modal import DownloadModal
 
-            self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
+            # Get download directory and warning from app
+            download_directory = getattr(self.app, "download_directory", DEFAULT_DOWNLOAD_DIRECTORY)
+            download_directory_warning = getattr(self.app, "download_directory_warning", None)
+
+            self.app.push_screen(
+                DownloadModal(s3_uri, is_folder, download_directory, download_directory_warning),
+                on_download_result,
+            )
 
     def action_upload(self) -> None:
         """Upload files to current location"""
