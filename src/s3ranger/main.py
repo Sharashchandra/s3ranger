@@ -12,9 +12,10 @@ from typing import Any, Dict
 import click
 
 from s3ranger import __version__
-from s3ranger.config import CONFIG_FILE_PATH, load_config
+from s3ranger.config import CONFIG_FILE_PATH, load_config, resolve_download_directory
 from s3ranger.credentials import resolve_credentials
 from s3ranger.ui.app import S3Ranger
+from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY
 
 # Constants
 THEME_CHOICES = ["Github Dark", "Dracula", "Solarized", "Sepia"]
@@ -107,6 +108,22 @@ def _configure_pagination(existing_config: Dict[str, Any]) -> bool:
     return enable
 
 
+def _configure_download_directory(existing_config: Dict[str, Any]) -> str:
+    """Configure download directory setting."""
+    click.echo()
+    click.echo("Download Configuration:")
+    click.echo("-" * 22)
+
+    current = existing_config.get("download_directory", "")
+    current_display = current if current else f"{DEFAULT_DOWNLOAD_DIRECTORY} (default)"
+    click.echo(f"Current download directory: {current_display}")
+
+    download_dir = _prompt_for_value("Download directory", current)
+
+    return download_dir if download_dir else None
+
+
+
 def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None:
     """Validate and save the configuration."""
     click.echo()
@@ -193,6 +210,12 @@ def _validate_and_save_config(config: Dict[str, Any], config_path: Path) -> None
     default=None,
     help="Enable or disable pagination (loads items incrementally as you scroll)",
 )
+@click.option(
+    "--download-directory",
+    type=str,
+    help="Default download directory for saving files",
+    default=None,
+)
 def cli(
     ctx: click.Context,
     endpoint_url: str | None = None,
@@ -204,6 +227,7 @@ def cli(
     theme: str | None = None,
     config: str | None = None,
     enable_pagination: bool | None = None,
+    download_directory: str | None = None,
 ):
     """S3 Terminal UI - Browse and manage S3 buckets and objects."""
     if ctx.invoked_subcommand is None:
@@ -218,6 +242,7 @@ def cli(
             theme=theme,
             config=config,
             enable_pagination=enable_pagination,
+            download_directory=download_directory,
         )
 
 
@@ -253,6 +278,11 @@ def configure(config: str | None = None):
     # Configure pagination
     s3_config["enable_pagination"] = _configure_pagination(existing_config)
 
+    # Configure download directory
+    download_dir = _configure_download_directory(existing_config)
+    if download_dir:
+        s3_config["download_directory"] = download_dir
+
     # Validate and save configuration
     _validate_and_save_config(s3_config, config_path)
 
@@ -267,6 +297,7 @@ def main(
     theme: str | None = None,
     config: str | None = None,
     enable_pagination: bool | None = None,
+    download_directory: str | None = None,
 ):
     """S3 Terminal UI - Browse and manage S3 buckets and objects."""
     try:
@@ -294,6 +325,11 @@ def main(
         final_theme = theme or config_obj.theme
         # CLI enable_pagination takes precedence over config (None means not specified)
         final_enable_pagination = enable_pagination if enable_pagination is not None else config_obj.enable_pagination
+        # Resolve download directory with priority order
+        final_download_directory, download_directory_warning = resolve_download_directory(
+            cli_download_dir=download_directory,
+            config_download_dir=config_obj.download_directory,
+        )
 
     except ValueError as e:
         raise click.ClickException(str(e))
@@ -308,6 +344,8 @@ def main(
         aws_session_token=resolved_creds.aws_session_token,
         theme=final_theme,
         enable_pagination=final_enable_pagination,
+        download_directory=final_download_directory,
+        download_directory_warning=download_directory_warning,
     )
     app.run()
 

@@ -4,6 +4,7 @@ from textual.app import App
 from textual.binding import Binding
 
 from s3ranger.gateways.s3 import S3
+from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY
 from s3ranger.ui.screens.main_screen import MainScreen
 
 
@@ -27,6 +28,8 @@ class S3Ranger(App):
         aws_session_token: str | None = None,
         theme: str = "Github Dark",
         enable_pagination: bool = True,
+        download_directory: str = DEFAULT_DOWNLOAD_DIRECTORY,
+        download_directory_warning: str | None = None,
         **kwargs,
     ):
         """Initialize the S3Ranger app.
@@ -40,6 +43,8 @@ class S3Ranger(App):
             aws_session_token: AWS session token for temporary credentials.
             theme: Theme name to use for the UI.
             enable_pagination: Whether to use pagination for loading items.
+            download_directory: Default download directory for saving files.
+            download_directory_warning: Warning message about download directory fallback.
         """
         super().__init__(**kwargs)
         self.endpoint_url = endpoint_url
@@ -51,6 +56,8 @@ class S3Ranger(App):
         self.selected_theme = theme
         self.current_theme_index = 0
         self.enable_pagination = enable_pagination
+        self.download_directory = download_directory
+        self.download_directory_warning = download_directory_warning
 
         # Set the endpoint URL, region, profile, and credentials globally for the S3 class
         S3.set_endpoint_url(endpoint_url)

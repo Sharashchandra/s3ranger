@@ -12,9 +12,8 @@ from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import SelectDirectory
 
 from s3ranger.gateways.s3 import S3
+from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY
 from s3ranger.ui.widgets import ProgressWidget
-
-FILE_PICKER_DEFAULT_PATH = "~/Downloads/"
 
 
 class MultiDownloadModal(ModalScreen[bool]):
@@ -29,20 +28,30 @@ class MultiDownloadModal(ModalScreen[bool]):
     # Reactive properties
     s3_paths: list[str] = reactive([])
     selected_objects: list[dict] = reactive([])
-    destination_path: str = reactive("~/Downloads/")
+    destination_path: str = reactive("")
     is_downloading: bool = reactive(False)
     download_progress: str = reactive("")
 
-    def __init__(self, s3_paths: list[str], selected_objects: list[dict]) -> None:
+    def __init__(
+        self,
+        s3_paths: list[str],
+        selected_objects: list[dict],
+        download_directory: str = DEFAULT_DOWNLOAD_DIRECTORY,
+        download_directory_warning: str | None = None,
+    ) -> None:
         """Initialize the multi-download modal.
 
         Args:
             s3_paths: List of S3 paths to download (e.g., ["s3://bucket/file1.txt", "s3://bucket/file2.txt"])
             selected_objects: List of selected object dictionaries with metadata
+            download_directory: Default download directory
+            download_directory_warning: Warning message about directory fallback
         """
         super().__init__()
         self.s3_paths = s3_paths
         self.selected_objects = selected_objects
+        self.download_directory = download_directory
+        self.download_directory_warning = download_directory_warning
 
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
@@ -81,8 +90,8 @@ class MultiDownloadModal(ModalScreen[bool]):
                     yield Label("Destination", classes="field-label")
                     with Horizontal(classes="input-with-button"):
                         yield Input(
-                            value="~/Downloads/",
-                            placeholder="Enter local destination path...",
+                            value=self.download_directory,
+                            placeholder=f"Default: {self.download_directory}",
                             id="destination-input",
                         )
                         yield Button("📁", id="file-picker-btn", classes="file-picker-button")
@@ -116,11 +125,15 @@ class MultiDownloadModal(ModalScreen[bool]):
         """Called when the modal is mounted."""
         # Set the destination input value
         destination_input = self.query_one("#destination-input", Input)
-        destination_input.value = FILE_PICKER_DEFAULT_PATH
+        destination_input.value = self.download_directory
 
         # Focus the files list so user can scroll through selected files
         files_list = self.query_one("#files-list-container", VerticalScroll)
         files_list.focus()
+
+        # Show warning notification if provided
+        if self.download_directory_warning:
+            self.notify(self.download_directory_warning, severity="warning")
 
     def watch_is_downloading(self, is_downloading: bool) -> None:
         """React to downloading state changes."""
@@ -263,7 +276,7 @@ class MultiDownloadModal(ModalScreen[bool]):
     @work
     async def action_file_picker(self) -> None:
         """Open file picker to select destination directory."""
-        picker = SelectDirectory(location=FILE_PICKER_DEFAULT_PATH)
+        picker = SelectDirectory(location=self.download_directory)
 
         if path := await self.app.push_screen_wait(picker):
             if path.is_dir():

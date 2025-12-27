@@ -1,6 +1,6 @@
 [project]
 name = "s3ranger"
-version = "1.2.0"
+version = "1.2.1"
 description = "A terminal-based user interface for browsing and managing AWS S3 buckets and objects"
 readme = "README.md"
 requires-python = ">=3.11"

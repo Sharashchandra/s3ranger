@@ -197,6 +197,7 @@ s3ranger configure
 | `--aws-session-token`     | AWS session token (CLI only, optional) | `--aws-session-token token123`                                     |
 | `--theme`                 | UI theme                               | `--theme "github dark"`                                            |
 | `--config`                | Configuration file path                | `--config ~/.s3ranger.config`                                      |
+| `--download-directory`    | Default download directory             | `--download-directory "/tmp"`                                        |
 | `--enable-pagination`     | Enable pagination (default)            | `--enable-pagination`                                              |
 | `--disable-pagination`    | Disable pagination                     | `--disable-pagination`                                             |
 
@@ -320,6 +321,10 @@ profile_name = "default"
 # UI Configuration
 theme = "Github Dark"
 
+# Download Configuration
+# Default directory for downloads (defaults to ~/Downloads/)
+download_directory = "~/Documents/"
+
 # Performance
 # Set to false to load all items at once instead of using pagination
 enable_pagination = true
@@ -329,7 +334,10 @@ enable_pagination = true
 
 - `profile_name` - AWS profile to use (can be overridden with `--profile-name`)
 - `theme` - UI theme (Github Dark, Dracula, Solarized, Sepia)
+- `download_directory` - Default directory for downloads (defaults to `~/Downloads/`)
 - `enable_pagination` - Enable or disable pagination
+
+> **Tip:** Set `download_directory = "."` in your config file to always use the current working directory as the default download location. This is useful when you want downloads to go to your project directory.
 
 > **Note:** AWS credentials (`aws_access_key_id`, `aws_secret_access_key`, `aws_session_token`) are only supported via CLI arguments.
 

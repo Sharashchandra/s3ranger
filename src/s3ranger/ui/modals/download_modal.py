@@ -12,9 +12,8 @@ from textual.widgets import Button, Input, Label, Static
 from textual_fspicker import SelectDirectory
 
 from s3ranger.gateways.s3 import S3
+from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY
 from s3ranger.ui.widgets import ProgressWidget
-
-FILE_PICKER_DEFAULT_PATH = "~/Downloads/"
 
 
 class DownloadModal(ModalScreen[bool]):
@@ -28,20 +27,30 @@ class DownloadModal(ModalScreen[bool]):
 
     # Reactive properties
     s3_path: str = reactive("")
-    destination_path: str = reactive("~/Downloads/")
+    destination_path: str = reactive("")
     is_folder: bool = reactive(False)
     is_downloading: bool = reactive(False)
 
-    def __init__(self, s3_path: str, is_folder: bool = False) -> None:
+    def __init__(
+        self,
+        s3_path: str,
+        is_folder: bool = False,
+        download_directory: str = DEFAULT_DOWNLOAD_DIRECTORY,
+        download_directory_warning: str | None = None,
+    ) -> None:
         """Initialize the download modal.
 
         Args:
             s3_path: The S3 path to download (e.g., s3://bucket/path/file.txt)
             is_folder: Whether the path represents a folder or file
+            download_directory: Default download directory
+            download_directory_warning: Warning message about directory fallback
         """
         super().__init__()
         self.s3_path = s3_path
         self.is_folder = is_folder
+        self.download_directory = download_directory
+        self.download_directory_warning = download_directory_warning
 
     def compose(self) -> ComposeResult:
         """Compose the modal layout."""
@@ -70,8 +79,8 @@ class DownloadModal(ModalScreen[bool]):
                     yield Label("Destination", classes="field-label")
                     with Horizontal(classes="input-with-button"):
                         yield Input(
-                            value="~/Downloads/",
-                            placeholder="Enter local destination path...",
+                            value=self.download_directory,
+                            placeholder=f"Default: {self.download_directory}",
                             id="destination-input",
                         )
                         yield Button("📁", id="file-picker-btn", classes="file-picker-button")
@@ -113,8 +122,12 @@ class DownloadModal(ModalScreen[bool]):
 
         # Focus the destination input and set its value
         destination_input = self.query_one("#destination-input", Input)
-        destination_input.value = FILE_PICKER_DEFAULT_PATH
+        destination_input.value = self.download_directory
         destination_input.focus()
+
+        # Show warning notification if provided
+        if self.download_directory_warning:
+            self.notify(self.download_directory_warning, severity="warning")
 
     def watch_is_downloading(self, is_downloading: bool) -> None:
         """React to downloading state changes."""
@@ -212,7 +225,7 @@ class DownloadModal(ModalScreen[bool]):
     @work
     async def action_file_picker(self) -> None:
         # Use SelectDirectory for both file and directory selection
-        picker = SelectDirectory(location=FILE_PICKER_DEFAULT_PATH)
+        picker = SelectDirectory(location=self.download_directory)
 
         if path := await self.app.push_screen_wait(picker):
             if path.is_dir():
