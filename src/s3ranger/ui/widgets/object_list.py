@@ -8,6 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
 from s3ranger.gateways.s3 import S3
+from s3ranger.ui.constants import OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
 from s3ranger.ui.widgets.sort_overlay import SortOverlay
@@ -16,10 +17,15 @@ from s3ranger.ui.widgets.sort_overlay import SortOverlay
 PARENT_DIR_KEY = ".."
 FILE_ICON = "📄"
 COLUMN_NAMES = ["Name", "Type", "Modified", "Size"]
+CHECKBOX_CHECKED = "[✓]"
+CHECKBOX_UNCHECKED = "[ ]"
 
 
 class ObjectItem(ListItem):
     """Individual item in the object list representing a file or folder."""
+
+    # Reactive property to track selection state
+    is_selected: bool = reactive(False)
 
     def __init__(self, object_info: dict):
         super().__init__()
@@ -31,6 +37,8 @@ class ObjectItem(ListItem):
             "modified": object_info.get("modified", ""),
             "size": object_info.get("size", ""),
         }
+        # Parent directory cannot be selected
+        self._can_select = self.object_info["key"] != PARENT_DIR_KEY
 
     def _format_object_name(self, name: str, is_folder: bool) -> str:
         """Format object name with appropriate icon."""
@@ -38,16 +46,41 @@ class ObjectItem(ListItem):
             return format_folder_display_text(name)
         return f"{FILE_ICON} {name}"
 
+    def _get_checkbox_display(self) -> str:
+        """Get the checkbox display string based on selection state."""
+        if not self._can_select:
+            return "   "  # No checkbox for parent directory
+        return CHECKBOX_CHECKED if self.is_selected else CHECKBOX_UNCHECKED
+
     def compose(self) -> ComposeResult:
-        """Render the object item with its properties in columns."""
-        name_with_icon = self._format_object_name(
-            self.object_info["key"], self.object_info["is_folder"]
-        )
+        """Render the object item with checkbox and properties in columns."""
+        name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
         with Horizontal():
+            yield Label(self._get_checkbox_display(), classes="object-checkbox")
             yield Label(name_with_icon, classes="object-key")
             yield Label(self.object_info["type"], classes="object-extension")
             yield Label(self.object_info["modified"], classes="object-modified")
             yield Label(self.object_info["size"], classes="object-size")
+
+    def watch_is_selected(self, selected: bool) -> None:
+        """React to selection state changes."""
+        try:
+            checkbox_label = self.query_one(".object-checkbox", Label)
+            checkbox_label.update(self._get_checkbox_display())
+            # Toggle CSS class for styling
+            if selected:
+                self.add_class("selected")
+            else:
+                self.remove_class("selected")
+        except Exception:
+            pass
+
+    def toggle_selection(self) -> bool:
+        """Toggle selection state. Returns new selection state."""
+        if not self._can_select:
+            return False
+        self.is_selected = not self.is_selected
+        return self.is_selected
 
     @property
     def object_key(self) -> str:
@@ -59,6 +92,11 @@ class ObjectItem(ListItem):
         """Whether this object is a folder."""
         return self.object_info["is_folder"]
 
+    @property
+    def can_select(self) -> bool:
+        """Whether this object can be selected."""
+        return self._can_select
+
 
 class ObjectList(Static):
     """Right panel widget displaying the contents of the selected S3 bucket."""
@@ -69,6 +107,9 @@ class ObjectList(Static):
         Binding("delete", "delete_item", "Delete"),
         Binding("ctrl+k", "rename_item", "Rename"),
         Binding("ctrl+s", "show_sort_overlay", "Sort"),
+        Binding("space", "toggle_selection", "Select"),
+        Binding("ctrl+a", "select_all", "Select All", show=False),
+        Binding("escape", "clear_selection", "Clear Selection", show=False),
     ]
 
     # Reactive properties
@@ -76,13 +117,25 @@ class ObjectList(Static):
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
     is_loading: bool = reactive(False)
+    is_loading_more: bool = reactive(False)  # Loading more (pagination) state
+    has_more_objects: bool = reactive(False)  # Whether more objects are available
     sort_column: int | None = reactive(None)
     sort_ascending: bool = reactive(True)
+    selected_count: int = reactive(0)  # Track number of selected items
 
     # Private cache for current level objects
-    _all_objects: dict = {}
     _on_load_complete_callback: callable = None
     _unsorted_objects: list[dict] = []  # Cache of unsorted objects
+    _selected_keys: set = set()  # Track selected object keys
+
+    # Pagination state
+    _continuation_token: str | None = None  # Token for next page
+    _all_loaded_files: list[dict] = []  # All files loaded so far
+    _all_loaded_folders: list[dict] = []  # All folders loaded so far
+    _loaded_keys: set = set()  # Set of loaded keys (for deduplication)
+    _is_fetching: bool = False  # Prevent duplicate fetch requests
+    _preserve_position_on_update: bool = False  # Preserve scroll position on next list update
+    _saved_scroll_position: int | None = None  # Saved position for restoration after loading more
 
     class ObjectSelected(Message):
         """Message sent when an object is selected."""
@@ -92,22 +145,129 @@ class ObjectList(Static):
             self.object_key = object_key
             self.is_folder = is_folder
 
+    class MultiSelectionChanged(Message):
+        """Message sent when multi-selection changes."""
+
+        def __init__(self, selected_count: int, selected_keys: set) -> None:
+            super().__init__()
+            self.selected_count = selected_count
+            self.selected_keys = selected_keys
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Check if an action is allowed based on current selection state."""
+        # Actions that require at least one item to be selected via checkbox
+        selection_required_actions = {"download", "delete_item", "rename_item"}
+
+        # Actions that are blocked when multiple items are selected
+        multi_select_blocked_actions = {"upload", "rename_item", "show_sort_overlay"}
+
+        # If no items selected via checkbox, disable selection-required actions
+        if self.selected_count == 0:
+            if action in selection_required_actions:
+                return False
+
+        # Block certain actions when multiple items are selected
+        if self.selected_count > 1 and action in multi_select_blocked_actions:
+            return False
+
+        return True
+
+    def watch_selected_count(self, count: int) -> None:
+        """React to selection count changes - refresh footer bindings."""
+        # Trigger a refresh of the footer to show/hide bindings
+        try:
+            if self.app:
+                self.app.refresh_bindings()
+        except Exception:
+            pass
+
     def compose(self) -> ComposeResult:
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
             with Horizontal(id="object-list-header"):
+                yield Label("", classes="object-checkbox-header")
                 yield Label("Name", classes="object-name-header")
                 yield Label("Type", classes="object-type-header")
                 yield Label("Modified", classes="object-modified-header")
                 yield Label("Size", classes="object-size-header")
             yield LoadingIndicator(id="object-loading")
             yield ListView(id="object-list")
+            yield Static("Loading more...", id="object-loading-more")
 
     def on_mount(self) -> None:
         """Initialize the widget when mounted."""
-        pass
+        # Initialize internal state
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self._is_fetching = False
+        self._preserve_position_on_update = False
+        self._saved_scroll_position = None
+
+        # Hide the loading more indicator initially
+        try:
+            loading_more = self.query_one("#object-loading-more", Static)
+            loading_more.display = False
+        except Exception:
+            pass
+
+        # Set up scroll monitoring for mouse scroll pagination
+        self._setup_scroll_monitoring()
+
+    def _setup_scroll_monitoring(self) -> None:
+        """Set up monitoring of scroll position for mouse-based pagination"""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            # Watch for scroll changes on the list view
+            self.watch(list_view, "scroll_y", self._on_list_scroll_change, init=False)
+        except Exception:
+            pass
+
+    def _on_list_scroll_change(self, scroll_y: float) -> None:
+        """Called when the list view scroll position changes"""
+        self._check_scroll_for_pagination()
 
     # Event handlers
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Handle list item highlight for infinite scroll detection"""
+        if event.item is None:
+            return
+
+        # Check if we're near the bottom of the list
+        self._check_scroll_for_pagination()
+
+    def _check_scroll_for_pagination(self) -> None:
+        """Check if we should load more objects based on scroll position"""
+        # Skip if pagination is disabled
+        if not getattr(self.app, "enable_pagination", True):
+            return
+
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            total_items = len(list_view.children)
+
+            if total_items == 0:
+                return
+
+            # Calculate which items are visible based on scroll position
+            # Each item has a height, we check if bottom items are near visible
+            scroll_y = list_view.scroll_y
+            max_scroll = list_view.max_scroll_y
+
+            # If we're near the bottom of the scroll area (within 20% of max scroll)
+            # or if we have few items and they're all visible
+            near_bottom = max_scroll == 0 or (max_scroll > 0 and scroll_y >= max_scroll * 0.8)
+
+            # Also check by index if highlight is active
+            current_index = list_view.index
+            near_bottom_by_index = current_index is not None and (total_items - current_index <= SCROLL_THRESHOLD_ITEMS)
+
+            if (near_bottom or near_bottom_by_index) and self.has_more_objects and not self._is_fetching:
+                self._load_more_objects()
+        except Exception:
+            pass
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle object selection"""
         if isinstance(event.item, ObjectItem):
@@ -133,12 +293,18 @@ class ObjectList(Static):
 
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
-        self._update_list_display()
+        preserve = self._preserve_position_on_update
+        self._preserve_position_on_update = False  # Reset flag
+        self._update_list_display(preserve_position=preserve)
         # Focus is handled in _on_objects_loaded
 
     def watch_is_loading(self, is_loading: bool) -> None:
         """React to loading state changes."""
         self._update_loading_state(is_loading)
+
+    def watch_is_loading_more(self, is_loading_more: bool) -> None:
+        """React to loading more state changes."""
+        self._update_loading_more_state(is_loading_more)
 
     # Public methods
     def set_bucket(self, bucket_name: str) -> None:
@@ -216,65 +382,177 @@ class ObjectList(Static):
         except Exception:
             pass
 
-    def _update_list_display(self) -> None:
-        """Populate the list view with object items."""
+    def _update_list_display(self, preserve_position: bool = False) -> None:
+        """Populate the list view with object items.
+
+        Args:
+            preserve_position: If True, only append new items instead of rebuilding
+        """
         try:
             list_view = self.query_one("#object-list", ListView)
-            list_view.clear()
 
-            # Add all objects to the list view
-            for obj in self.objects:
-                list_view.append(ObjectItem(obj))
+            if preserve_position:
+                # When preserving position (loading more), only append new items
+                # This keeps existing items and their highlight state intact
+                existing_keys = {child.object_key for child in list_view.children if isinstance(child, ObjectItem)}
+                for obj in self.objects:
+                    if obj["key"] not in existing_keys:
+                        list_view.append(ObjectItem(obj))
+            else:
+                # Full rebuild for initial load or navigation
+                list_view.clear()
+                for obj in self.objects:
+                    list_view.append(ObjectItem(obj))
+
+            # Clear saved position after use
+            self._saved_scroll_position = None
         except Exception:
-            # Silent failure if list view isn't ready yet
-            pass
+            self._saved_scroll_position = None
 
     def _load_bucket_objects(self) -> None:
-        """Load objects from the current S3 bucket prefix."""
+        """Load objects from the current S3 bucket prefix (initial load)."""
         if not self.current_bucket:
             self._clear_objects()
             return
 
+        # Reset pagination state for fresh load
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
+        self._is_fetching = True
+
         # Start asynchronous loading
-        thread = threading.Thread(target=self._load_objects_async, daemon=True)
+        thread = threading.Thread(
+            target=self._fetch_objects,
+            args=(None, False),  # No continuation token, not loading more
+            daemon=True,
+        )
         thread.start()
 
-    def _load_objects_async(self) -> None:
-        """Asynchronously load objects from S3."""
+    def _load_more_objects(self) -> None:
+        """Load more objects (pagination) - triggered by infinite scroll."""
+        if self._is_fetching or not self.has_more_objects or not self._continuation_token:
+            return
+
+        # Save current scroll position BEFORE starting async operation
         try:
-            objects = S3.list_objects_for_prefix(
-                bucket_name=self.current_bucket, prefix=self.current_prefix
+            list_view = self.query_one("#object-list", ListView)
+            self._saved_scroll_position = list_view.index
+        except Exception:
+            self._saved_scroll_position = None
+
+        self.is_loading_more = True
+        self._is_fetching = True
+        thread = threading.Thread(
+            target=self._fetch_objects,
+            args=(self._continuation_token, True),  # With token, loading more
+            daemon=True,
+        )
+        thread.start()
+
+    def _fetch_objects(self, continuation_token: str | None = None, is_loading_more: bool = False) -> None:
+        """Fetch objects from S3 in background thread.
+
+        Args:
+            continuation_token: Token for fetching next page of results
+            is_loading_more: Whether this is a pagination load (vs initial load)
+        """
+        try:
+            # Use page size only if pagination is enabled
+            enable_pagination = getattr(self.app, "enable_pagination", True)
+            max_keys = OBJECT_LIST_PAGE_SIZE if enable_pagination else None
+
+            response = S3.list_objects_for_prefix_paginated(
+                bucket_name=self.current_bucket,
+                prefix=self.current_prefix,
+                max_keys=max_keys,
+                continuation_token=continuation_token,
             )
-            self.app.call_later(lambda: self._on_objects_loaded(objects))
+            files = response["files"]
+            folders = response["folders"]
+            next_token = response["continuation_token"]
+
+            # Capture values for closure
+            self.app.call_later(lambda: self._on_objects_loaded(files, folders, next_token, is_loading_more))
         except Exception as error:
-            # Capture the error explicitly in the closure
-            def report_error(err=error):
-                self._on_objects_error(err)
+            # Capture exception in closure for thread safety
+            captured_error = error
+            captured_is_loading_more = is_loading_more
+            self.app.call_later(lambda: self._on_objects_error(captured_error, captured_is_loading_more))
 
-            self.app.call_later(report_error)
+    def _on_objects_loaded(
+        self,
+        files: list[dict],
+        folders: list[dict],
+        next_token: str | None = None,
+        is_loading_more: bool = False,
+    ) -> None:
+        """Handle successful objects loading.
 
-    def _on_objects_loaded(self, objects: dict) -> None:
-        """Handle successful objects loading."""
-        self._all_objects = objects
-        self._filter_objects_by_prefix()
+        Args:
+            files: List of file objects
+            folders: List of folder prefixes
+            next_token: Continuation token for next page
+            is_loading_more: Whether this was a pagination load
+        """
+        self._is_fetching = False
 
-        # Calculate delay based on number of objects (more objects = longer delay)
-        obj_count = len(self.objects)
-        focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
+        # Add new folders to loaded set (for deduplication)
+        for folder in folders:
+            prefix = folder.get("Prefix", "")
+            if prefix not in self._loaded_keys:
+                self._loaded_keys.add(prefix)
+                self._all_loaded_folders.append(folder)
 
-        # First stop loading
-        self.is_loading = False
+        # Add new files to loaded set (for deduplication)
+        for file in files:
+            key = file.get("Key", "")
+            if key not in self._loaded_keys:
+                self._loaded_keys.add(key)
+                self._all_loaded_files.append(file)
 
-        # Then schedule focus with a calculated delay based on object count
-        self.set_timer(focus_delay, self._focus_first_item)
+        # Update pagination state
+        self._continuation_token = next_token
+        self.has_more_objects = next_token is not None
+
+        # Build the objects for display
+        # Set flag to preserve position when loading more (pagination)
+        self._preserve_position_on_update = is_loading_more
+        self._build_and_set_objects()
+
+        # Update loading states
+        if is_loading_more:
+            self.is_loading_more = False
+        else:
+            self.is_loading = False
+
+            # Calculate delay based on number of objects (more objects = longer delay)
+            obj_count = len(self.objects)
+            focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
+
+            # Schedule focus with a calculated delay based on object count
+            self.set_timer(focus_delay, self._focus_first_item)
 
         self._execute_completion_callback()
 
-    def _on_objects_error(self, error: Exception) -> None:
-        """Handle objects loading error."""
-        self._clear_objects()
-        self.is_loading = False
+    def _on_objects_error(self, error: Exception, is_loading_more: bool = False) -> None:
+        """Handle objects loading error.
+
+        Args:
+            error: The exception that occurred
+            is_loading_more: Whether this was a pagination load
+        """
+        self._is_fetching = False
         self.notify(f"Error loading bucket objects: {error}", severity="error")
+
+        # For pagination errors, keep existing objects
+        if is_loading_more:
+            self.is_loading_more = False
+        else:
+            self._clear_objects()
+            self.is_loading = False
 
         self._execute_completion_callback()
 
@@ -287,9 +565,15 @@ class ObjectList(Static):
 
     def _clear_objects(self) -> None:
         """Reset object state when no data is available."""
-        self._all_objects = {}
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
         self.objects = []
         self.is_loading = False
+        self._selected_keys.clear()
+        self.selected_count = 0
 
     def _clear_selection(self) -> None:
         """Clear list selection and hide the list view during navigation."""
@@ -301,51 +585,45 @@ class ObjectList(Static):
             # ListView might not be available yet, silently ignore
             pass
 
-    def _filter_objects_by_prefix(self) -> None:
-        """Filter cached objects to show only those matching the current prefix."""
-        if not self._all_objects:
-            self.objects = []
-            self._unsorted_objects = []
-            return
-
-        unsorted_objects = self._build_ui_objects(self._all_objects)
-        self._unsorted_objects = unsorted_objects
-
-        # Apply current sorting if any
-        if self.sort_column is not None:
-            self.objects = self._sort_objects(
-                unsorted_objects, self.sort_column, self.sort_ascending
-            )
-        else:
-            self.objects = unsorted_objects
-
-    def _build_ui_objects(self, s3_response: dict) -> list[dict]:
-        """Transform S3 response into UI-friendly format."""
+    def _build_and_set_objects(self) -> None:
+        """Build UI objects from loaded files and folders and set the objects property."""
         ui_objects = []
 
         # Add parent directory navigation if in a subfolder
         if self.current_prefix:
             ui_objects.append(self._create_parent_dir_object())
 
-        # Add folders from the response
-        folders = s3_response.get("folders", [])
-        for folder in folders:
-            prefix = folder["Prefix"]
+        # Add folders
+        for folder in self._all_loaded_folders:
+            prefix = folder.get("Prefix", "")
             # Extract folder name by removing the current prefix and trailing slash
             folder_name = prefix[len(self.current_prefix) :].rstrip("/")
             if folder_name:  # Only add if we get a valid folder name
                 ui_objects.append(self._create_folder_object(folder_name))
 
-        # Add files from the response
-        files = s3_response.get("files", [])
-        for s3_object in files:
-            key = s3_object["Key"]
+        # Add files
+        for s3_object in self._all_loaded_files:
+            key = s3_object.get("Key", "")
             # Extract filename by removing the current prefix
             filename = key[len(self.current_prefix) :]
             if filename:  # Only add if we get a valid filename
                 ui_objects.append(self._create_file_object(filename, s3_object))
 
-        return ui_objects
+        self._unsorted_objects = ui_objects
+
+        # Apply current sorting if any
+        if self.sort_column is not None:
+            self.objects = self._sort_objects(ui_objects, self.sort_column, self.sort_ascending)
+        else:
+            self.objects = ui_objects
+
+    def _update_loading_more_state(self, is_loading_more: bool) -> None:
+        """Update UI elements based on loading more state."""
+        try:
+            loading_more = self.query_one("#object-loading-more", Static)
+            loading_more.display = is_loading_more
+        except Exception:
+            pass
 
     def _create_parent_dir_object(self) -> dict:
         """Create the parent directory (..) object."""
@@ -419,7 +697,15 @@ class ObjectList(Static):
     def _prepare_for_navigation(self) -> None:
         """Prepare UI for folder navigation."""
         self._clear_selection()
+        self._selected_keys.clear()
+        self.selected_count = 0
         self.is_loading = True
+        # Reset pagination state for new navigation
+        self._all_loaded_files = []
+        self._all_loaded_folders = []
+        self._loaded_keys = set()
+        self._continuation_token = None
+        self.has_more_objects = False
 
     # Utility methods
     def get_focused_object(self) -> dict | None:
@@ -427,39 +713,19 @@ class ObjectList(Static):
         try:
             list_view = self.query_one("#object-list", ListView)
             if list_view.index is None or not self.objects:
-                return None
+                return
 
             focused_index = list_view.index
             if 0 <= focused_index < len(self.objects):
                 return self.objects[focused_index]
-            return None
+            return
         except Exception:
-            return None
-
-    def get_s3_uri_for_focused_object(self) -> str | None:
-        """Get the S3 URI for the currently focused object."""
-        focused_obj = self.get_focused_object()
-        if not focused_obj or not self.current_bucket:
-            return None
-
-        # Handle parent directory case
-        if focused_obj["key"] == "..":
-            return None
-
-        # Construct the full S3 path from breadcrumb (current prefix) + object key
-        if focused_obj["is_folder"]:
-            # For folders, combine current prefix with folder name
-            full_path = f"{self.current_prefix}{focused_obj['key']}/"
-        else:
-            # For files, combine current prefix with file name
-            full_path = f"{self.current_prefix}{focused_obj['key']}"
-
-        return f"s3://{self.current_bucket}/{full_path}"
+            return
 
     def get_current_s3_location(self) -> str | None:
         """Get the S3 URI for the current location (bucket + prefix)."""
         if not self.current_bucket:
-            return None
+            return
 
         # Construct S3 URI for current location
         if self.current_prefix:
@@ -484,19 +750,16 @@ class ObjectList(Static):
     # Action methods
     def action_download(self) -> None:
         """Download selected items"""
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
-
-        if not s3_uri or not focused_obj:
+        # Get the selected objects (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for download", severity="error")
             return
 
-        # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
-
-        # Import here to avoid circular imports
-        from s3ranger.ui.modals.download_modal import DownloadModal
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for download", severity="error")
+            return
 
         # Show the download modal
         def on_download_result(result: bool) -> None:
@@ -506,10 +769,33 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
+        # Check if we have multi-selection
+        if self.selected_count > 1:
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.multi_download_modal import MultiDownloadModal
+
+            # Show the multi-download modal
+            self.app.push_screen(MultiDownloadModal(s3_uris, selected_objects), on_download_result)
+        else:
+            # Single file download
+            selected_obj = selected_objects[0]
+            s3_uri = s3_uris[0]
+
+            # Determine if it's a folder or file
+            is_folder = selected_obj.get("is_folder", False)
+
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.download_modal import DownloadModal
+
+            self.app.push_screen(DownloadModal(s3_uri, is_folder), on_download_result)
 
     def action_upload(self) -> None:
         """Upload files to current location"""
+        # Block upload when multiple items are selected
+        if self.selected_count > 1:
+            self.notify("Upload not available when multiple items are selected", severity="warning")
+            return
+
         # Get the current S3 location (bucket + prefix)
         current_location = self.get_current_s3_location()
 
@@ -536,32 +822,27 @@ class ObjectList(Static):
 
     def action_delete_item(self) -> None:
         """Delete selected items"""
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
-
-        if not s3_uri or not focused_obj:
+        # Get the selected objects (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for deletion", severity="error")
             return
 
-        # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for deletion", severity="error")
+            return
 
-        # Check if this is the last item in the current directory (excluding parent dir)
+        # Check if this would delete all items in the current directory
         actual_items = [obj for obj in self.objects if obj.get("key") != ".."]
-        is_last_item = len(actual_items) == 1 and actual_items[0].get(
-            "key"
-        ) == focused_obj.get("key")
-
-        # Import here to avoid circular imports
-        from s3ranger.ui.modals.delete_modal import DeleteModal
+        deleting_all = len(selected_objects) >= len(actual_items)
 
         # Show the delete modal
         def on_delete_result(result: bool) -> None:
             if result:
                 # Delete was successful
-                if is_last_item and self.current_prefix:
-                    # This was the last item and we're not at bucket root, navigate up
+                if deleting_all and self.current_prefix:
+                    # All items were deleted and we're not at bucket root, navigate up
                     self._navigate_up()
                 else:
                     # Just refresh the view normally
@@ -569,25 +850,54 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
+        # Check if we have multi-selection
+        if self.selected_count > 1:
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.multi_delete_modal import MultiDeleteModal
+
+            # Show the multi-delete modal
+            self.app.push_screen(MultiDeleteModal(s3_uris, selected_objects), on_delete_result)
+        else:
+            # Single file delete
+            selected_obj = selected_objects[0]
+            s3_uri = s3_uris[0]
+
+            # Determine if it's a folder or file
+            is_folder = selected_obj.get("is_folder", False)
+
+            # Import here to avoid circular imports
+            from s3ranger.ui.modals.delete_modal import DeleteModal
+
+            self.app.push_screen(DeleteModal(s3_uri, is_folder), on_delete_result)
 
     def action_rename_item(self) -> None:
         """Rename selected item"""
-        # Get the currently focused object
-        s3_uri = self.get_s3_uri_for_focused_object()
-        focused_obj = self.get_focused_object()
+        # Block rename when multiple items are selected
+        if self.selected_count > 1:
+            self.notify("Rename not available when multiple items are selected", severity="warning")
+            return
 
-        if not s3_uri or not focused_obj:
+        # Get the selected object (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
             self.notify("No object selected for renaming", severity="error")
             return
 
-        # Don't allow renaming of parent directory entry
-        if focused_obj.get("key") == "..":
+        selected_obj = selected_objects[0]
+        s3_uris = self.get_selected_s3_uris()
+        if not s3_uris:
+            self.notify("No object selected for renaming", severity="error")
+            return
+
+        s3_uri = s3_uris[0]
+
+        # Don't allow renaming of parent directory entry (shouldn't happen with checkbox selection)
+        if selected_obj.get("key") == "..":
             self.notify("Cannot rename parent directory entry", severity="error")
             return
 
         # Determine if it's a folder or file
-        is_folder = focused_obj.get("is_folder", False)
+        is_folder = selected_obj.get("is_folder", False)
 
         # Import here to avoid circular imports
         from s3ranger.ui.modals.rename_modal import RenameModal
@@ -600,13 +910,15 @@ class ObjectList(Static):
             # Always restore focus to the object list after modal closes
             self.call_later(self.focus_list)
 
-        self.app.push_screen(
-            RenameModal(s3_uri, is_folder, self.objects), on_rename_result
-        )
+        self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)
 
     # Sorting functionality
     def action_show_sort_overlay(self) -> None:
         """Show the sort overlay for column selection."""
+        # Block sort when multiple items are selected
+        if self.selected_count > 1:
+            self.notify("Sort not available when multiple items are selected", severity="warning")
+            return
 
         def on_sort_result(column_index: int | None) -> None:
             self._on_sort_selected(column_index)
@@ -626,9 +938,7 @@ class ObjectList(Static):
                 self.sort_ascending = False  # Start with descending for new columns
 
             # Apply sorting to current objects
-            self.objects = self._sort_objects(
-                self._unsorted_objects, self.sort_column, self.sort_ascending
-            )
+            self.objects = self._sort_objects(self._unsorted_objects, self.sort_column, self.sort_ascending)
 
             # Update header to show sort indicator
             self._update_header_sort_indicators()
@@ -637,9 +947,10 @@ class ObjectList(Static):
         """Update header labels to show current sort column and direction."""
         try:
             header_container = self.query_one("#object-list-header")
-            labels = header_container.query(Label)
+            labels = list(header_container.query(Label))
 
-            for idx, label in enumerate(labels):
+            # Skip the first label (checkbox header) - start from index 1
+            for idx, label in enumerate(labels[1:]):  # Skip checkbox header
                 if idx < len(COLUMN_NAMES):
                     base_name = COLUMN_NAMES[idx]
 
@@ -652,9 +963,7 @@ class ObjectList(Static):
             # Silently ignore if headers not available
             pass
 
-    def _sort_objects(
-        self, objects: list[dict], column_index: int, ascending: bool
-    ) -> list[dict]:
+    def _sort_objects(self, objects: list[dict], column_index: int, ascending: bool) -> list[dict]:
         """Sort objects by the specified column."""
         if not objects or column_index is None:
             return objects
@@ -678,9 +987,7 @@ class ObjectList(Static):
         sort_key_func = sort_keys.get(column_index)
         if sort_key_func:
             try:
-                sorted_objects = sorted(
-                    other_objects, key=sort_key_func, reverse=not ascending
-                )
+                sorted_objects = sorted(other_objects, key=sort_key_func, reverse=not ascending)
             except Exception:
                 # Fall back to original order if sorting fails
                 sorted_objects = other_objects
@@ -758,3 +1065,88 @@ class ObjectList(Static):
             return int(float(size_str))
         except ValueError:
             return 0
+
+    # Multi-selection methods
+    def action_toggle_selection(self) -> None:
+        """Toggle selection of the currently focused item."""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            if list_view.index is None:
+                return
+
+            current_item = list_view.children[list_view.index]
+            if isinstance(current_item, ObjectItem) and current_item.can_select:
+                is_selected = current_item.toggle_selection()
+                object_key = current_item.object_key
+
+                # Update tracking set
+                if is_selected:
+                    self._selected_keys.add(object_key)
+                else:
+                    self._selected_keys.discard(object_key)
+
+                self.selected_count = len(self._selected_keys)
+                self.post_message(self.MultiSelectionChanged(self.selected_count, self._selected_keys.copy()))
+        except Exception:
+            pass
+
+    def action_select_all(self) -> None:
+        """Select all items in the current view."""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            for child in list_view.children:
+                if isinstance(child, ObjectItem) and child.can_select:
+                    if not child.is_selected:
+                        child.is_selected = True
+                        self._selected_keys.add(child.object_key)
+
+            self.selected_count = len(self._selected_keys)
+            self.post_message(self.MultiSelectionChanged(self.selected_count, self._selected_keys.copy()))
+        except Exception:
+            pass
+
+    def action_clear_selection(self) -> None:
+        """Clear all selections."""
+        self._clear_all_selections()
+
+    def _clear_all_selections(self) -> None:
+        """Internal method to clear all selections."""
+        try:
+            list_view = self.query_one("#object-list", ListView)
+            for child in list_view.children:
+                if isinstance(child, ObjectItem):
+                    child.is_selected = False
+
+            self._selected_keys.clear()
+            self.selected_count = 0
+            self.post_message(self.MultiSelectionChanged(0, set()))
+        except Exception:
+            pass
+
+    def get_selected_objects(self) -> list[dict]:
+        """Get list of all selected objects."""
+        selected = []
+        for obj in self.objects:
+            if obj.get("key") in self._selected_keys:
+                selected.append(obj)
+        return selected
+
+    def get_selected_s3_uris(self) -> list[str]:
+        """Get S3 URIs for all selected objects."""
+        if not self.current_bucket:
+            return []
+
+        uris = []
+        for obj in self.get_selected_objects():
+            key = obj.get("key", "")
+            if key and key != "..":
+                if obj.get("is_folder"):
+                    full_path = f"{self.current_prefix}{key}/"
+                else:
+                    full_path = f"{self.current_prefix}{key}"
+                uris.append(f"s3://{self.current_bucket}/{full_path}")
+        return uris
+
+    def has_selection(self) -> bool:
+        """Check if any items are selected."""
+        return self.selected_count > 0

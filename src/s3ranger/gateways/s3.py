@@ -17,7 +17,7 @@ class S3:
     _aws_session_token = None
 
     @classmethod
-    def set_endpoint_url(cls, endpoint_url: str = None) -> None:
+    def set_endpoint_url(cls, endpoint_url: str | None = None) -> None:
         """Set the S3 endpoint URL for all S3 operations.
 
         Args:
@@ -26,7 +26,7 @@ class S3:
         cls._endpoint_url = endpoint_url
 
     @classmethod
-    def set_region_name(cls, region_name: str = None) -> None:
+    def set_region_name(cls, region_name: str | None = None) -> None:
         """Set the AWS region name for all S3 operations.
 
         Args:
@@ -35,7 +35,7 @@ class S3:
         cls._region_name = region_name
 
     @classmethod
-    def set_profile_name(cls, profile_name: str = None) -> None:
+    def set_profile_name(cls, profile_name: str | None = None) -> None:
         """Set the AWS profile name for all S3 operations.
 
         Args:
@@ -64,9 +64,9 @@ class S3:
     @classmethod
     def set_credentials(
         cls,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        aws_session_token: str = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
     ) -> None:
         """Set the AWS credentials for all S3 operations.
 
@@ -78,6 +78,15 @@ class S3:
         cls._aws_access_key_id = aws_access_key_id
         cls._aws_secret_access_key = aws_secret_access_key
         cls._aws_session_token = aws_session_token
+
+    @classmethod
+    def is_using_cli_credentials(cls) -> bool:
+        """Check if CLI credentials are being used instead of a profile.
+
+        Returns:
+            True if using explicit CLI credentials, False otherwise.
+        """
+        return bool(cls._aws_access_key_id and cls._aws_secret_access_key)
 
     @classmethod
     def _run_aws_cli_command(cls, command_args: list[str]) -> str:
@@ -119,9 +128,7 @@ class S3:
             command.extend(["--profile", cls._profile_name])
 
         try:
-            result = subprocess.run(
-                command, env=env, capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
             return result.stdout
         except subprocess.CalledProcessError as e:
             raise RuntimeError(e.stderr)
@@ -145,37 +152,58 @@ class S3:
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not kwargs.get("client"):
-                # Create a new S3 client if not provided
-                client_kwargs = {"service_name": "s3"}
-                if S3._endpoint_url:
-                    client_kwargs["endpoint_url"] = S3._endpoint_url
-                if S3._region_name:
-                    client_kwargs["region_name"] = S3._region_name
+                # Environment variables that boto3 reads for credentials
+                # We temporarily unset these to prevent boto3 from auto-reading them
+                aws_env_vars = [
+                    "AWS_ACCESS_KEY_ID",
+                    "AWS_SECRET_ACCESS_KEY",
+                    "AWS_SESSION_TOKEN",
+                    "AWS_PROFILE",
+                    "AWS_DEFAULT_PROFILE",
+                ]
 
-                # Create session with credentials following boto3 precedence order:
-                # 1. Explicit credentials (highest priority)
-                # 2. Profile name
-                # 3. Environment variables (handled automatically by boto3)
-                # 4. Shared credential files (handled automatically by boto3)
+                # Save and unset AWS env vars
+                saved_env = {}
+                for var in aws_env_vars:
+                    if var in os.environ:
+                        saved_env[var] = os.environ.pop(var)
 
-                session_kwargs = {}
+                try:
+                    # Create a new S3 client if not provided
+                    client_kwargs = {"service_name": "s3"}
+                    if S3._endpoint_url:
+                        client_kwargs["endpoint_url"] = S3._endpoint_url
+                    if S3._region_name:
+                        client_kwargs["region_name"] = S3._region_name
 
-                # Check if explicit credentials are provided (highest priority)
-                if S3._aws_access_key_id and S3._aws_secret_access_key:
-                    session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
-                    session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
-                    if S3._aws_session_token:
-                        session_kwargs["aws_session_token"] = S3._aws_session_token
-                # Otherwise, use profile if specified
-                elif S3._profile_name:
-                    session_kwargs["profile_name"] = S3._profile_name
+                    # Create session with credentials following boto3 precedence order:
+                    # 1. Explicit credentials (highest priority)
+                    # 2. Profile name
+                    # 3. Environment variables (handled automatically by boto3)
+                    # 4. Shared credential files (handled automatically by boto3)
 
-                # If region is specified, add it to session (this can also be set via environment/config)
-                if S3._region_name:
-                    session_kwargs["region_name"] = S3._region_name
+                    session_kwargs = {}
 
-                session = boto3.Session(**session_kwargs)
-                kwargs["client"] = session.client(**client_kwargs)
+                    # Check if explicit credentials are provided (highest priority)
+                    if S3._aws_access_key_id and S3._aws_secret_access_key:
+                        session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
+                        session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
+                        if S3._aws_session_token:
+                            session_kwargs["aws_session_token"] = S3._aws_session_token
+                    # Otherwise, use profile if specified
+                    elif S3._profile_name:
+                        session_kwargs["profile_name"] = S3._profile_name
+
+                    # If region is specified, add it to session (this can also be set via environment/config)
+                    if S3._region_name:
+                        session_kwargs["region_name"] = S3._region_name
+
+                    session = boto3.Session(**session_kwargs)
+                    kwargs["client"] = session.client(**client_kwargs)
+                finally:
+                    # Restore env vars
+                    os.environ.update(saved_env)
+
             return func(*args, **kwargs)
 
         return wrapper
@@ -185,9 +213,9 @@ class S3:
         @wraps(func)
         def wrapper(
             *args,
-            s3_uri: str = None,
-            bucket_name: str = None,
-            prefix: str = None,
+            s3_uri: str | None = None,
+            bucket_name: str | None = None,
+            prefix: str | None = None,
             **kwargs,
         ):
             if not s3_uri and not bucket_name:
@@ -202,17 +230,43 @@ class S3:
 
     @get_client
     @staticmethod
-    def list_buckets(client: boto3.client, *, prefix: str = None) -> list[dict]:
-        """List all S3 buckets."""
-        print(f"Listing S3 buckets with prefix '{prefix or ''}'")
-        paginator = client.get_paginator("list_buckets")
-        response_iterator = paginator.paginate(Prefix=prefix or "")
+    def list_buckets(
+        client: boto3.client,
+        *,
+        prefix: str | None = None,
+        max_buckets: int | None = None,
+        continuation_token: str | None = None,
+    ) -> dict:
+        """List S3 buckets with optional pagination and prefix filtering.
 
-        buckets = []
-        for response in response_iterator:
-            buckets.extend(response.get("Buckets", []))
+        Args:
+            client: The boto3 S3 client (injected by decorator).
+            prefix: Optional prefix to filter bucket names.
+            max_buckets: Maximum number of buckets to return per page.
+            continuation_token: Token for fetching the next page of results.
 
-        return response.get("Buckets", [])
+        Returns:
+            dict with keys:
+                - buckets: List of bucket dictionaries
+                - continuation_token: Token for next page (None if no more pages)
+        """
+        print(f"Listing S3 buckets with prefix '{prefix or ''}', max_buckets={max_buckets}")
+
+        # Build request parameters
+        request_params = {}
+        if prefix:
+            request_params["Prefix"] = prefix
+        if max_buckets:
+            request_params["MaxBuckets"] = max_buckets
+        if continuation_token:
+            request_params["ContinuationToken"] = continuation_token
+
+        response = client.list_buckets(**request_params)
+
+        return {
+            "buckets": response.get("Buckets", []),
+            "continuation_token": response.get("ContinuationToken"),
+        }
 
     @get_client
     @resolve_s3_uri
@@ -221,7 +275,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> list[dict]:
         """List objects in a bucket with optional prefix."""
         paginator = client.get_paginator("list_objects_v2")
@@ -238,14 +292,10 @@ class S3:
     @get_client
     @resolve_s3_uri
     @staticmethod
-    def list_objects_for_prefix(
-        client: boto3.client, *, bucket_name: str, prefix: str | None = None
-    ) -> list[dict]:
+    def list_objects_for_prefix(client: boto3.client, *, bucket_name: str, prefix: str | None = None) -> dict:
         """List objects in a bucket for a specific prefix."""
         paginator = client.get_paginator("list_objects_v2")
-        response_iterator = paginator.paginate(
-            Bucket=bucket_name, Prefix=prefix or "", Delimiter="/"
-        )
+        response_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "", Delimiter="/")
 
         print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}'")
         objects = {}
@@ -257,6 +307,55 @@ class S3:
 
         return objects
 
+    @get_client
+    @resolve_s3_uri
+    @staticmethod
+    def list_objects_for_prefix_paginated(
+        client: boto3.client,
+        *,
+        bucket_name: str,
+        prefix: str | None = None,
+        max_keys: int | None = None,
+        continuation_token: str | None = None,
+    ) -> dict:
+        """List objects in a bucket for a specific prefix with pagination support.
+
+        Args:
+            client: The boto3 S3 client (injected by decorator).
+            bucket_name: The name of the S3 bucket.
+            prefix: Optional prefix to filter objects.
+            max_keys: Maximum number of keys (files + folders) to return per page.
+            continuation_token: Token for fetching the next page of results.
+
+        Returns:
+            dict with keys:
+                - files: List of file objects
+                - folders: List of folder prefixes
+                - continuation_token: Token for next page (None if no more pages)
+        """
+        print(f"Listing objects in bucket '{bucket_name}' for prefix '{prefix}', max_keys={max_keys}")
+
+        # Build request parameters
+        request_params = {
+            "Bucket": bucket_name,
+            "Prefix": prefix or "",
+            "Delimiter": "/",
+        }
+        if max_keys:
+            request_params["MaxKeys"] = max_keys
+        if continuation_token:
+            request_params["ContinuationToken"] = continuation_token
+
+        response = client.list_objects_v2(**request_params)
+
+        result = {
+            "files": response.get("Contents", []),
+            "folders": response.get("CommonPrefixes", []),
+            "continuation_token": response.get("NextContinuationToken"),
+        }
+
+        return result
+
     # -------------------------Upload------------------------- #
 
     @get_client
@@ -267,7 +366,7 @@ class S3:
         *,
         local_file_path: str,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Upload a file to S3."""
         if not prefix or prefix.endswith("/"):
@@ -275,16 +374,12 @@ class S3:
         else:
             key = prefix
 
-        print(
-            f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
-        )
+        print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
         client.upload_file(local_file_path, bucket_name, key)
 
     @resolve_s3_uri
     @staticmethod
-    def upload_directory(
-        *, local_dir_path: str, bucket_name: str, prefix: str = None
-    ) -> None:
+    def upload_directory(*, local_dir_path: str, bucket_name: str, prefix: str | None = None) -> None:
         """Upload a directory to S3."""
         local_dir_path = local_dir_path.rstrip("/")
         if not os.path.isdir(local_dir_path):
@@ -312,7 +407,7 @@ class S3:
         *,
         local_dir_path: str,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Upload a directory to S3."""
         if not os.path.isdir(local_dir_path):
@@ -324,9 +419,7 @@ class S3:
                 relative_path = os.path.relpath(local_file_path, local_dir_path)
                 key = f"{prefix}{relative_path.replace(os.sep, '/')}"
 
-                print(
-                    f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'"
-                )
+                print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
                 client.upload_file(local_file_path, bucket_name, key)
 
     # -------------------------Download------------------------- #
@@ -358,9 +451,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def download_directory(
-        *, bucket_name: str, prefix: str = None, local_dir_path: str = None
-    ) -> None:
+    def download_directory(*, bucket_name: str, prefix: str | None = None, local_dir_path: str | None = None) -> None:
         """Download a directory from S3."""
         if not local_dir_path:
             local_dir_path = os.getcwd()
@@ -403,7 +494,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
         local_dir_path: str = ".",
     ) -> None:
         """Download a directory from S3."""
@@ -450,7 +541,7 @@ class S3:
 
     @resolve_s3_uri
     @staticmethod
-    def delete_directory(*, bucket_name: str, prefix: str = None) -> None:
+    def delete_directory(*, bucket_name: str, prefix: str | None = None) -> None:
         """Delete a directory from S3."""
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
 
@@ -467,7 +558,7 @@ class S3:
         client: boto3.client,
         *,
         bucket_name: str,
-        prefix: str = None,
+        prefix: str | None = None,
     ) -> None:
         """Delete a directory from S3."""
         paginator = client.get_paginator("list_objects_v2")
@@ -476,12 +567,8 @@ class S3:
         print(f"Deleting directory s3://{bucket_name}/{prefix}")
         for response in response_iterator:
             if "Contents" in response:
-                objects_to_delete = [
-                    {"Key": obj["Key"]} for obj in response["Contents"]
-                ]
-                client.delete_objects(
-                    Bucket=bucket_name, Delete={"Objects": objects_to_delete}
-                )
+                objects_to_delete = [{"Key": obj["Key"]} for obj in response["Contents"]]
+                client.delete_objects(Bucket=bucket_name, Delete={"Objects": objects_to_delete})
 
     # -------------------------Move------------------------- #
 

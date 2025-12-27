@@ -31,9 +31,10 @@ class SortOverlay(ModalScreen[int | None]):
         """Update the object list headers to show sort numbers."""
         try:
             header_container = self.object_list.query_one("#object-list-header")
-            labels = header_container.query("Label")
+            labels = list(header_container.query("Label"))
 
-            for idx, label in enumerate(labels):
+            # Skip the first label (checkbox header) - start from index 1
+            for idx, label in enumerate(labels[1:]):  # Skip checkbox header
                 if idx < len(COLUMN_NAMES):
                     base_name = COLUMN_NAMES[idx]
                     label.update(f"{base_name} [bold $accent]\\[{idx + 1}][/]")
