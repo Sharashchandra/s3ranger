@@ -983,6 +983,11 @@ ObjectList {
     margin: 0;
 }
 
+/* Add left padding when checkbox is hidden */
+.object-name-header-no-checkbox {
+    padding-left: 4;
+}
+
 .object-type-header {
     color: $foreground;
     text-style: bold;
@@ -1170,6 +1175,11 @@ ListView#object-list > ObjectItem.selected.-highlight .object-checkbox {
     margin: 0;
 }
 
+/* Add left padding when checkbox is hidden */
+.object-key-no-checkbox {
+    padding-left: 2;
+}
+
 .object-extension {
     color: $secondary;
     text-style: none;
@@ -1214,4 +1224,114 @@ ObjectItem.selected .object-checkbox {
     margin: 0;
     width: 100%;
     visibility: visible;
+}
+
+/* ====================================
+ * MOVE/COPY SCREEN STYLES
+ * ==================================== */
+
+/* Move screen container */
+#move-screen-container {
+    background: $background;
+    border: solid $primary 50%;
+    layout: vertical;
+    height: 100%;
+}
+
+/* Move header banner */
+#move-header-banner {
+    dock: top;
+    height: auto;
+    width: 100%;
+    background: $surface;
+    border-bottom: solid $primary;
+    padding: 1 2;
+}
+
+#move-operation-label {
+    color: $primary;
+    text-style: bold;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0;
+}
+
+#move-files-preview {
+    color: $secondary;
+    text-style: none;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#move-warning-label {
+    color: $warning;
+    text-style: none;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0;
+}
+
+#copy-info-label {
+    color: $success;
+    text-style: none;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0;
+}
+
+#move-instruction-label {
+    color: $secondary;
+    text-style: italic;
+    width: 100%;
+    height: auto;
+    margin-top: 1;
+}
+
+/* Move progress indicator */
+#move-progress-indicator {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    align: center middle;
+    background: $background;
+    color: $primary;
+    text-style: none;
+    display: none;
+    padding: 2 4;
+}
+
+/* Move screen overlay */
+MoveScreen {
+    background: $background;
+}
+
+/* ====================================
+ * PROGRESS MODAL STYLES
+ * ==================================== */
+
+ProgressModal {
+    align: center middle;
+    background: #000000 70%;
+}
+
+#progress-modal-dialog {
+    width: 100;
+    max-width: 120;
+    height: auto;
+    min-height: 25;
+    max-height: 50;
+    background: $background;
+    border: solid $primary;
+}
+
+#progress-modal-widget {
+    height: 100%;
+    width: 100%;
+    content-align: center middle;
+    align: center middle;
+    background: $background;
+    color: $primary;
+    text-style: none;
+    padding: 2 4;
 }
