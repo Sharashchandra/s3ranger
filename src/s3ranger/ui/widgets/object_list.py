@@ -5,10 +5,13 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
+from textual.widgets import (Input, Label, ListItem, ListView,
+                             LoadingIndicator, Static)
 
 from s3ranger.gateways.s3 import S3
-from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY, OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
+from s3ranger.ui.constants import (DEFAULT_DOWNLOAD_DIRECTORY,
+                                   OBJECT_LIST_PAGE_SIZE,
+                                   SCROLL_THRESHOLD_ITEMS)
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
 from s3ranger.ui.widgets.sort_overlay import SortOverlay
@@ -116,6 +119,7 @@ class ObjectList(Static):
     objects: list[dict] = reactive([])
     current_bucket: str = reactive("")
     current_prefix: str = reactive("")
+    filter_query: str = reactive("")
     is_loading: bool = reactive(False)
     is_loading_more: bool = reactive(False)  # Loading more (pagination) state
     has_more_objects: bool = reactive(False)  # Whether more objects are available
@@ -184,6 +188,7 @@ class ObjectList(Static):
     def compose(self) -> ComposeResult:
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
+            yield Input(placeholder="Filter objects...", id="object-filter")
             with Horizontal(id="object-list-header"):
                 yield Label("", classes="object-checkbox-header")
                 yield Label("Name", classes="object-name-header")
@@ -283,6 +288,11 @@ class ObjectList(Static):
             self._clear_selection()
             self.is_loading = True
             self.current_prefix = ""
+            self.filter_query = ""
+            try:
+                self.query_one("#object-filter", Input).value = ""
+            except Exception:
+                pass
             self._update_breadcrumb()
             self._load_bucket_objects()
 
@@ -290,6 +300,21 @@ class ObjectList(Static):
         """React to prefix changes."""
         self._update_breadcrumb()
         # Objects will be loaded by navigation methods
+        # Clear filter when navigating
+        self.filter_query = ""
+        try:
+            self.query_one("#object-filter", Input).value = ""
+        except Exception:
+            pass
+
+    def watch_filter_query(self, query: str) -> None:
+        """React to filter query changes."""
+        self._apply_filter_and_sort()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input changes for filtering."""
+        if event.input.id == "object-filter":
+            self.filter_query = event.value
 
     def watch_objects(self, objects: list[dict]) -> None:
         """React to objects list changes."""
@@ -585,6 +610,24 @@ class ObjectList(Static):
             # ListView might not be available yet, silently ignore
             pass
 
+    def _apply_filter_and_sort(self) -> None:
+        """Apply filter and sort to unsorted objects and update objects list."""
+        objects = self._unsorted_objects
+
+        # Filter
+        if self.filter_query:
+            query = self.filter_query.lower()
+            objects = [
+                obj for obj in objects
+                if obj["key"] == PARENT_DIR_KEY or query in obj["key"].lower()
+            ]
+
+        # Sort
+        if self.sort_column is not None:
+            self.objects = self._sort_objects(objects, self.sort_column, self.sort_ascending)
+        else:
+            self.objects = objects
+
     def _build_and_set_objects(self) -> None:
         """Build UI objects from loaded files and folders and set the objects property."""
         ui_objects = []
@@ -610,12 +653,7 @@ class ObjectList(Static):
                 ui_objects.append(self._create_file_object(filename, s3_object))
 
         self._unsorted_objects = ui_objects
-
-        # Apply current sorting if any
-        if self.sort_column is not None:
-            self.objects = self._sort_objects(ui_objects, self.sort_column, self.sort_ascending)
-        else:
-            self.objects = ui_objects
+        self._apply_filter_and_sort()
 
     def _update_loading_more_state(self, is_loading_more: bool) -> None:
         """Update UI elements based on loading more state."""
@@ -772,7 +810,8 @@ class ObjectList(Static):
         # Check if we have multi-selection
         if self.selected_count > 1:
             # Import here to avoid circular imports
-            from s3ranger.ui.modals.multi_download_modal import MultiDownloadModal
+            from s3ranger.ui.modals.multi_download_modal import \
+                MultiDownloadModal
 
             # Get download directory and warning from app
             download_directory = getattr(self.app, "download_directory", DEFAULT_DOWNLOAD_DIRECTORY)
@@ -952,7 +991,7 @@ class ObjectList(Static):
                 self.sort_ascending = False  # Start with descending for new columns
 
             # Apply sorting to current objects
-            self.objects = self._sort_objects(self._unsorted_objects, self.sort_column, self.sort_ascending)
+            self._apply_filter_and_sort()
 
             # Update header to show sort indicator
             self._update_header_sort_indicators()
