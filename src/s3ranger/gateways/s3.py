@@ -619,3 +619,52 @@ class S3:
 
         # Run the command with error handling
         S3._run_aws_cli_command(command_args)
+
+    # -------------------------Copy------------------------- #
+
+    @get_client
+    @staticmethod
+    def copy_file(
+        client: boto3.client,
+        *,
+        source_s3_bucket: str,
+        source_s3_key: str,
+        destination_s3_bucket: str,
+        destination_s3_key: str,
+    ):
+        """Copy a file from one S3 location to another."""
+        print(
+            f"Copying file from s3://{source_s3_bucket}/{source_s3_key} to s3://{destination_s3_bucket}/{destination_s3_key}"
+        )
+        client.copy_object(
+            Bucket=destination_s3_bucket,
+            CopySource={"Bucket": source_s3_bucket, "Key": source_s3_key},
+            Key=destination_s3_key,
+        )
+
+    @get_client
+    @staticmethod
+    def copy_directory(
+        client: boto3.client,
+        *,
+        source_s3_bucket: str,
+        source_s3_prefix: str,
+        destination_s3_bucket: str,
+        destination_s3_prefix: str,
+    ):
+        """Copy a directory from one S3 location to another."""
+        print(
+            f"Copying directory from s3://{source_s3_bucket}/{source_s3_prefix} to s3://{destination_s3_bucket}/{destination_s3_prefix}"
+        )
+
+        # Build AWS CLI command arguments
+        command_args = [
+            "s3",
+            "cp",
+            f"s3://{source_s3_bucket}/{source_s3_prefix}",
+            f"s3://{destination_s3_bucket}/{destination_s3_prefix}",
+            "--recursive",
+        ]
+
+        # Run the command with error handling
+        S3._run_aws_cli_command(command_args)
