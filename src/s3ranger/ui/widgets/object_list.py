@@ -27,7 +27,7 @@ class ObjectItem(ListItem):
     # Reactive property to track selection state
     is_selected: bool = reactive(False)
 
-    def __init__(self, object_info: dict):
+    def __init__(self, object_info: dict, show_checkbox: bool = True):
         super().__init__()
         # Extract only the fields we need
         self.object_info = {
@@ -39,6 +39,7 @@ class ObjectItem(ListItem):
         }
         # Parent directory cannot be selected
         self._can_select = self.object_info["key"] != PARENT_DIR_KEY
+        self._show_checkbox = show_checkbox
 
     def _format_object_name(self, name: str, is_folder: bool) -> str:
         """Format object name with appropriate icon."""
@@ -48,16 +49,19 @@ class ObjectItem(ListItem):
 
     def _get_checkbox_display(self) -> str:
         """Get the checkbox display string based on selection state."""
-        if not self._can_select:
-            return "   "  # No checkbox for parent directory
+        if not self._show_checkbox or not self._can_select:
+            return "   "  # No checkbox in folders_only mode or for parent directory
         return CHECKBOX_CHECKED if self.is_selected else CHECKBOX_UNCHECKED
 
     def compose(self) -> ComposeResult:
         """Render the object item with checkbox and properties in columns."""
         name_with_icon = self._format_object_name(self.object_info["key"], self.object_info["is_folder"])
         with Horizontal():
-            yield Label(self._get_checkbox_display(), classes="object-checkbox")
-            yield Label(name_with_icon, classes="object-key")
+            if self._show_checkbox:
+                yield Label(self._get_checkbox_display(), classes="object-checkbox")
+            # Add extra padding to name when checkbox is hidden
+            key_classes = "object-key" + (" object-key-no-checkbox" if not self._show_checkbox else "")
+            yield Label(name_with_icon, classes=key_classes)
             yield Label(self.object_info["type"], classes="object-extension")
             yield Label(self.object_info["modified"], classes="object-modified")
             yield Label(self.object_info["size"], classes="object-size")
@@ -106,6 +110,8 @@ class ObjectList(Static):
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
         Binding("ctrl+k", "rename_item", "Rename"),
+        Binding("m", "move", "Move"),
+        Binding("c", "copy", "Copy"),
         Binding("ctrl+s", "show_sort_overlay", "Sort"),
         Binding("space", "toggle_selection", "Select"),
         Binding("ctrl+a", "select_all", "Select All", show=False),
@@ -153,10 +159,26 @@ class ObjectList(Static):
             self.selected_count = selected_count
             self.selected_keys = selected_keys
 
+    def __init__(self, folders_only: bool = False, **kwargs) -> None:
+        """Initialize the ObjectList widget.
+
+        Args:
+            folders_only: If True, only show folders (no files). Used for destination selection.
+            **kwargs: Additional keyword arguments passed to parent Static widget.
+        """
+        super().__init__(**kwargs)
+        self.folders_only = folders_only
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Check if an action is allowed based on current selection state."""
+        # In folders_only mode (move/copy screen), disable all file operations
+        if self.folders_only:
+            blocked_actions = {"download", "upload", "delete_item", "rename_item", "move", "copy", "show_sort_overlay", "toggle_selection", "select_all", "clear_selection"}
+            if action in blocked_actions:
+                return False
+
         # Actions that require at least one item to be selected via checkbox
-        selection_required_actions = {"download", "delete_item", "rename_item"}
+        selection_required_actions = {"download", "delete_item", "rename_item", "move", "copy"}
 
         # Actions that are blocked when multiple items are selected
         multi_select_blocked_actions = {"upload", "rename_item", "show_sort_overlay"}
@@ -185,8 +207,11 @@ class ObjectList(Static):
         with Vertical(id="object-list-container"):
             yield Breadcrumb()
             with Horizontal(id="object-list-header"):
-                yield Label("", classes="object-checkbox-header")
-                yield Label("Name", classes="object-name-header")
+                if not self.folders_only:
+                    yield Label("", classes="object-checkbox-header")
+                # Add extra padding to Name header when checkbox is hidden
+                name_classes = "object-name-header" + (" object-name-header-no-checkbox" if self.folders_only else "")
+                yield Label("Name", classes=name_classes)
                 yield Label("Type", classes="object-type-header")
                 yield Label("Modified", classes="object-modified-header")
                 yield Label("Size", classes="object-size-header")
@@ -390,6 +415,7 @@ class ObjectList(Static):
         """
         try:
             list_view = self.query_one("#object-list", ListView)
+            show_checkbox = not self.folders_only
 
             if preserve_position:
                 # When preserving position (loading more), only append new items
@@ -397,12 +423,12 @@ class ObjectList(Static):
                 existing_keys = {child.object_key for child in list_view.children if isinstance(child, ObjectItem)}
                 for obj in self.objects:
                     if obj["key"] not in existing_keys:
-                        list_view.append(ObjectItem(obj))
+                        list_view.append(ObjectItem(obj, show_checkbox=show_checkbox))
             else:
                 # Full rebuild for initial load or navigation
                 list_view.clear()
                 for obj in self.objects:
-                    list_view.append(ObjectItem(obj))
+                    list_view.append(ObjectItem(obj, show_checkbox=show_checkbox))
 
             # Clear saved position after use
             self._saved_scroll_position = None
@@ -601,13 +627,14 @@ class ObjectList(Static):
             if folder_name:  # Only add if we get a valid folder name
                 ui_objects.append(self._create_folder_object(folder_name))
 
-        # Add files
-        for s3_object in self._all_loaded_files:
-            key = s3_object.get("Key", "")
-            # Extract filename by removing the current prefix
-            filename = key[len(self.current_prefix) :]
-            if filename:  # Only add if we get a valid filename
-                ui_objects.append(self._create_file_object(filename, s3_object))
+        # Add files (skip if folders_only mode is enabled)
+        if not self.folders_only:
+            for s3_object in self._all_loaded_files:
+                key = s3_object.get("Key", "")
+                # Extract filename by removing the current prefix
+                filename = key[len(self.current_prefix) :]
+                if filename:  # Only add if we get a valid filename
+                    ui_objects.append(self._create_file_object(filename, s3_object))
 
         self._unsorted_objects = ui_objects
 
@@ -925,6 +952,55 @@ class ObjectList(Static):
             self.call_later(self.focus_list)
 
         self.app.push_screen(RenameModal(s3_uri, is_folder, self.objects), on_rename_result)
+
+    def action_move(self) -> None:
+        """Move selected items to a different location."""
+        self._perform_move_or_copy(is_move=True)
+
+    def action_copy(self) -> None:
+        """Copy selected items to a different location."""
+        self._perform_move_or_copy(is_move=False)
+
+    def _perform_move_or_copy(self, is_move: bool) -> None:
+        """Common logic for move and copy operations.
+
+        Args:
+            is_move: True for move, False for copy
+        """
+        # Get the selected objects (via checkbox)
+        selected_objects = self.get_selected_objects()
+        if not selected_objects:
+            operation = "move" if is_move else "copy"
+            self.notify(f"No objects selected for {operation}", severity="error")
+            return
+
+        # Don't allow moving/copying parent directory entry
+        if any(obj.get("key") == ".." for obj in selected_objects):
+            self.notify("Cannot move/copy parent directory entry", severity="error")
+            return
+
+        # Import here to avoid circular imports
+        from s3ranger.ui.screens.move_screen import MoveScreen
+
+        # Show the move screen
+        def on_move_result(result: bool) -> None:
+            if result:
+                # Move/copy was successful, refresh the view
+                self.refresh_objects()
+            # Clear selection after returning from move/copy screen
+            self._clear_all_selections()
+            # Always restore focus to the object list after screen closes
+            self.call_later(self.focus_list)
+
+        self.app.push_screen(
+            MoveScreen(
+                source_bucket=self.current_bucket,
+                source_prefix=self.current_prefix,
+                selected_objects=selected_objects,
+                is_move=is_move,
+            ),
+            on_move_result,
+        )
 
     # Sorting functionality
     def action_show_sort_overlay(self) -> None:

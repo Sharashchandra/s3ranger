@@ -51,6 +51,8 @@ class HelpModal(ModalScreen[bool]):
                     with Container(classes="help-keybindings"):
                         yield self._create_keybinding_row("d", "Download selected file/folder")
                         yield self._create_keybinding_row("u", "Upload file to current location")
+                        yield self._create_keybinding_row("m", "Move selected file/folder to another location")
+                        yield self._create_keybinding_row("c", "Copy selected file/folder to another location")
                         yield self._create_keybinding_row("Delete", "Delete selected file/folder")
                         yield self._create_keybinding_row("Ctrl+k", "Rename selected file/folder")
 
