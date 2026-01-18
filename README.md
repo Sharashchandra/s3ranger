@@ -16,6 +16,7 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 - **Navigate folder structures** seamlessly
 - **Upload files and directories** to S3
 - **Download files and directories** from S3
+- **Copy and move files and folders** within the same bucket or across different S3 buckets
 - **Delete objects and folders** with confirmation prompts
 - **Rename files and folders** with conflict detection
 - **Filter and search** through buckets
@@ -218,6 +219,8 @@ s3ranger configure
 | `Ctrl+p` | Open command palette                           |
 | `u`      | Upload file/folder                             |
 | `d`      | Download selected item                         |
+| `c`      | Copy selected item(s)                          |
+| `m`      | Move selected item(s)                          |
 | `Delete` | Delete selected item                           |
 | `Ctrl+k` | Rename selected item                           |
 | `F1`     | Help                                           |
