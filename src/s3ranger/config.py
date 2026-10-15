@@ -81,7 +81,7 @@ def merge_config_with_cli_args(config: S3Config, **cli_args) -> S3Config:
 def compress_path(path: str) -> str:
     """Compress a path by replacing home directory with ~."""
     home = os.path.expanduser("~")
-    if path.startswith(home):
+    if path == home or path.startswith(home + os.sep):
         return "~" + path[len(home):]
     return path
 

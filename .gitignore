@@ -176,3 +176,6 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 scratch/
+coverage.json
+snapshot_report.html
+snapshot_report/
