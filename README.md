@@ -421,6 +421,38 @@ pip install -e ".[dev]"
 python -m s3ranger.main
 ```
 
+### Publishing
+
+Publishing is manual. Pushes, tags, and GitHub releases do not publish packages.
+Every run builds a wheel from the latest `main`, regardless of the branch
+selected in the Run workflow dialog.
+
+Add these **repository secrets** under Settings → Secrets and variables → Actions:
+
+| Registry | Username secret | Token secret |
+| --- | --- | --- |
+| TestPyPI | `TEST_PYPI_USERNAME` | `TEST_PYPI_API_TOKEN` |
+| PyPI | `PYPI_USERNAME` | `PYPI_API_TOKEN` |
+
+Set both username secrets to `__token__`. Use a separate API token from each
+registry, including its `pypi-` prefix; account passwords are not supported.
+Only the selected registry's secrets are required for a run.
+
+1. Merge the code to publish into `main`. Before publishing a changed release,
+   bump the version in `pyproject.toml` and `src/s3ranger/__init__.py`, update the
+   `uv.lock` with `uv lock`, and commit these changes to `main`.
+2. Open Actions → **Publish package** → **Run workflow**.
+3. Choose **TestPyPI** (the default) or **PyPI**, then click **Run workflow**.
+
+The workflow checks wheel metadata and tests the installed CLI before uploading.
+It publishes the committed package version without automatically bumping it;
+registries reject changed files for an already published version. Runs targeting
+the same registry are serialized without cancelling an active upload.
+
+The workflow file must be present on the repository's default branch (currently
+`develop`) for the Run workflow button to appear. It still checks out and builds
+`main`.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
