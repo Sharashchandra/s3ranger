@@ -1,5 +1,6 @@
 """Main S3Ranger application."""
 
+from textual import events
 from textual.app import App
 from textual.binding import Binding
 
@@ -64,6 +65,9 @@ class S3Ranger(App):
         S3.set_region_name(region_name)
         S3.set_profile_name(profile_name)
         S3.set_credentials(aws_access_key_id, aws_secret_access_key, aws_session_token)
+
+    def on_resize(self, event: events.Resize) -> None:
+        self.set_class(event.size.width < 100, "compact")
 
     def register_custom_themes(self) -> None:
         # Import all themes

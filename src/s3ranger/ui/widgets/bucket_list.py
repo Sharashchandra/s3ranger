@@ -95,6 +95,11 @@ class BucketList(Static):
 
         self.call_later(self.load_buckets)
 
+    def on_unmount(self) -> None:
+        if self._filter_debounce_timer is not None:
+            self._filter_debounce_timer.cancel()
+            self._filter_debounce_timer = None
+
     def _setup_scroll_monitoring(self) -> None:
         """Set up monitoring of scroll position for mouse-based pagination"""
         try:

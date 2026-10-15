@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-15
+
+### Added
+
+- Read-only preview of text files smaller than 10 MB, with scrolling and case-insensitive search
+- Preview one file selected with `Space` by pressing `p`, preserving the selection and list position when closing
+- Support for approved text, data, configuration, and source-code extensions, with UTF-8 and BOM-marked UTF-16 decoding
+
+### Fixed
+
+- Unsupported extensions and binary content are rejected instead of displaying a hex dump
+- Pressing Enter, F3, or Shift+F3 with an empty search query preserves focus; `Ctrl+f` focuses the preview search field
+
 ## [1.3.0] - 2026-01-18
 
 ### Added

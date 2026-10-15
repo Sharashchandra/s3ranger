@@ -1,0 +1,12 @@
+services:
+  rustfs:
+    image: rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+    environment:
+      RUSTFS_ACCESS_KEY: s3ranger-test
+      RUSTFS_SECRET_KEY: s3ranger-test-secret
+      RUSTFS_CONSOLE_ENABLE: "false"
+    ports:
+      - "127.0.0.1::9000"
+    tmpfs:
+      - /data:uid=10001,gid=10001,mode=0777
+      - /logs:uid=10001,gid=10001,mode=0777

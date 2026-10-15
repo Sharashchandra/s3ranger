@@ -50,6 +50,9 @@ class HelpModal(ModalScreen[bool]):
                     yield Label("File Operations", classes="help-section-title")
                     with Container(classes="help-keybindings"):
                         yield self._create_keybinding_row("d", "Download selected file/folder")
+                        yield self._create_keybinding_row(
+                            "p", "Preview one Space-selected text file (<10 MB)"
+                        )
                         yield self._create_keybinding_row("u", "Upload file to current location")
                         yield self._create_keybinding_row("m", "Move selected file/folder to another location")
                         yield self._create_keybinding_row("c", "Copy selected file/folder to another location")
@@ -84,6 +87,12 @@ class HelpModal(ModalScreen[bool]):
                         yield self._create_keybinding_row("Ctrl+o", "Open folder picker (download modal)")
                         yield self._create_keybinding_row("Ctrl+o", "Open file picker (upload modal)")
                         yield self._create_keybinding_row("Ctrl+l", "Open folder picker (upload modal)")
+                        yield self._create_keybinding_row(
+                            "Ctrl+f", "Search inside preview; Enter/F3 next, Shift+F3 previous"
+                        )
+                        yield self._create_keybinding_row(
+                            "Arrow keys", "Scroll preview; Escape leaves search or closes preview"
+                        )
 
                 # Tips section
                 with Vertical(classes="help-section"):

@@ -20,7 +20,7 @@ def parse_s3_uri(s3_uri: str) -> tuple[str, str]:
     """
     s3_loc_obj = namedtuple("s3_location", ["bucket", "file_key"])
     s3_res = urlparse(s3_uri)
-    s3_loc = s3_loc_obj(s3_res.netloc, s3_res.path[1:])
+    s3_loc = s3_loc_obj(s3_res.netloc, s3_uri.partition("://")[2].partition("/")[2])
 
     return s3_loc
 

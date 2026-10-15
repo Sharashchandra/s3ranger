@@ -5,6 +5,9 @@ from functools import wraps
 from urllib.parse import urlparse
 
 import boto3
+from botocore.session import get_session
+
+PREVIEW_LIMIT = 10_000_000  # Strictly less than 10 MB.
 
 
 class S3:
@@ -143,7 +146,7 @@ class S3:
         """
         s3_loc_obj = namedtuple("s3_location", ["bucket", "file_key"])
         s3_res = urlparse(s3_path)
-        s3_loc = s3_loc_obj(s3_res.netloc, s3_res.path[1:])
+        s3_loc = s3_loc_obj(s3_res.netloc, s3_path.partition("://")[2].partition("/")[2])
 
         return s3_loc
 
@@ -152,57 +155,41 @@ class S3:
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not kwargs.get("client"):
-                # Environment variables that boto3 reads for credentials
-                # We temporarily unset these to prevent boto3 from auto-reading them
-                aws_env_vars = [
-                    "AWS_ACCESS_KEY_ID",
-                    "AWS_SECRET_ACCESS_KEY",
-                    "AWS_SESSION_TOKEN",
-                    "AWS_PROFILE",
-                    "AWS_DEFAULT_PROFILE",
-                ]
+                # Create a new S3 client if not provided
+                client_kwargs = {"service_name": "s3"}
+                if S3._endpoint_url:
+                    client_kwargs["endpoint_url"] = S3._endpoint_url
+                if S3._region_name:
+                    client_kwargs["region_name"] = S3._region_name
 
-                # Save and unset AWS env vars
-                saved_env = {}
-                for var in aws_env_vars:
-                    if var in os.environ:
-                        saved_env[var] = os.environ.pop(var)
+                # Create session with credentials following boto3 precedence order:
+                # 1. Explicit credentials (highest priority)
+                # 2. Profile name
+                # 3. Environment variables (handled automatically by boto3)
+                # 4. Shared credential files (handled automatically by boto3)
 
-                try:
-                    # Create a new S3 client if not provided
-                    client_kwargs = {"service_name": "s3"}
-                    if S3._endpoint_url:
-                        client_kwargs["endpoint_url"] = S3._endpoint_url
-                    if S3._region_name:
-                        client_kwargs["region_name"] = S3._region_name
+                session_kwargs = {}
 
-                    # Create session with credentials following boto3 precedence order:
-                    # 1. Explicit credentials (highest priority)
-                    # 2. Profile name
-                    # 3. Environment variables (handled automatically by boto3)
-                    # 4. Shared credential files (handled automatically by boto3)
+                # Check if explicit credentials are provided (highest priority)
+                if S3._aws_access_key_id and S3._aws_secret_access_key:
+                    # Explicit keys must not inherit a profile from the environment.
+                    botocore_session = get_session()
+                    botocore_session.get_component("config_store").set_config_variable("profile", None)
+                    session_kwargs["botocore_session"] = botocore_session
+                    session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
+                    session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
+                    if S3._aws_session_token:
+                        session_kwargs["aws_session_token"] = S3._aws_session_token
+                # Otherwise, use profile if specified
+                elif S3._profile_name:
+                    session_kwargs["profile_name"] = S3._profile_name
 
-                    session_kwargs = {}
+                # If region is specified, add it to session (this can also be set via environment/config)
+                if S3._region_name:
+                    session_kwargs["region_name"] = S3._region_name
 
-                    # Check if explicit credentials are provided (highest priority)
-                    if S3._aws_access_key_id and S3._aws_secret_access_key:
-                        session_kwargs["aws_access_key_id"] = S3._aws_access_key_id
-                        session_kwargs["aws_secret_access_key"] = S3._aws_secret_access_key
-                        if S3._aws_session_token:
-                            session_kwargs["aws_session_token"] = S3._aws_session_token
-                    # Otherwise, use profile if specified
-                    elif S3._profile_name:
-                        session_kwargs["profile_name"] = S3._profile_name
-
-                    # If region is specified, add it to session (this can also be set via environment/config)
-                    if S3._region_name:
-                        session_kwargs["region_name"] = S3._region_name
-
-                    session = boto3.Session(**session_kwargs)
-                    kwargs["client"] = session.client(**client_kwargs)
-                finally:
-                    # Restore env vars
-                    os.environ.update(saved_env)
+                session = boto3.Session(**session_kwargs)
+                kwargs["client"] = session.client(**client_kwargs)
 
             return func(*args, **kwargs)
 
@@ -301,9 +288,9 @@ class S3:
         objects = {}
         for response in response_iterator:
             if "Contents" in response:
-                objects["files"] = response["Contents"]
+                objects.setdefault("files", []).extend(response["Contents"])
             if "CommonPrefixes" in response:
-                objects["folders"] = response["CommonPrefixes"]
+                objects.setdefault("folders", []).extend(response["CommonPrefixes"])
 
         return objects
 
@@ -417,12 +404,28 @@ class S3:
             for file in files:
                 local_file_path = os.path.join(root, file)
                 relative_path = os.path.relpath(local_file_path, local_dir_path)
-                key = f"{prefix}{relative_path.replace(os.sep, '/')}"
+                key = f"{prefix or ''}{relative_path.replace(os.sep, '/')}"
 
                 print(f"Uploading file '{local_file_path}' to bucket '{bucket_name}' with key '{key}'")
                 client.upload_file(local_file_path, bucket_name, key)
 
     # -------------------------Download------------------------- #
+    @get_client
+    @staticmethod
+    def read_preview(client: boto3.client, *, bucket_name: str, key: str) -> bytes:
+        """Read a small object into memory, always closing the response body."""
+        response = client.get_object(Bucket=bucket_name, Key=key)
+        body = response["Body"]
+        try:
+            if response["ContentLength"] >= PREVIEW_LIMIT:
+                raise ValueError("Preview is available only for files smaller than 10 MB")
+            data = body.read(PREVIEW_LIMIT)
+            if len(data) >= PREVIEW_LIMIT:
+                raise ValueError("Preview is available only for files smaller than 10 MB")
+            return data
+        finally:
+            body.close()
+
     @get_client
     @resolve_s3_uri
     @staticmethod
@@ -443,7 +446,7 @@ class S3:
             local_file_path = local_dir_path
             directory_path = os.path.dirname(local_dir_path)
 
-        if not os.path.exists(directory_path):
+        if directory_path and not os.path.exists(directory_path):
             os.makedirs(directory_path)
 
         print(f"Downloading file from s3://{bucket_name}/{prefix} to {local_file_path}")
