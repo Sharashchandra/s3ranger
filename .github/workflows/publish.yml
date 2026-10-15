@@ -1,0 +1,68 @@
+name: Publish package
+run-name: Publish to ${{ inputs.repository }} from main
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Package registry
+        type: choice
+        required: true
+        default: TestPyPI
+        options:
+          - TestPyPI
+          - PyPI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ inputs.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.11"
+          enable-cache: false
+
+      - name: Build wheel
+        run: uv build --wheel --no-sources
+
+      - name: Check wheel metadata
+        run: uvx twine check --strict dist/*.whl
+
+      - name: Smoke-test installed wheel
+        run: |
+          uv run --isolated --no-project --with dist/*.whl s3ranger --version
+          uv run --isolated --no-project --with dist/*.whl s3ranger --help
+
+      - name: Publish to TestPyPI
+        if: inputs.repository == 'TestPyPI'
+        env:
+          UV_PUBLISH_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          UV_PUBLISH_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          : "${UV_PUBLISH_USERNAME:?Set the TEST_PYPI_USERNAME repository secret to __token__}"
+          : "${UV_PUBLISH_PASSWORD:?Set the TEST_PYPI_API_TOKEN repository secret}"
+          uv publish --index testpypi --trusted-publishing never dist/*.whl
+
+      - name: Publish to PyPI
+        if: inputs.repository == 'PyPI'
+        env:
+          UV_PUBLISH_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          : "${UV_PUBLISH_USERNAME:?Set the PYPI_USERNAME repository secret to __token__}"
+          : "${UV_PUBLISH_PASSWORD:?Set the PYPI_API_TOKEN repository secret}"
+          uv publish --trusted-publishing never dist/*.whl
