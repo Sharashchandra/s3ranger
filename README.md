@@ -16,6 +16,7 @@ A terminal-based user interface for browsing and managing AWS S3 buckets and obj
 - **Navigate folder structures** seamlessly
 - **Upload files and directories** to S3
 - **Download files and directories** from S3
+- **Preview selected text files smaller than 10 MB** with scrolling and search
 - **Copy and move files and folders** within the same bucket or across different S3 buckets
 - **Delete objects and folders** with confirmation prompts
 - **Rename files and folders** with conflict detection
@@ -219,11 +220,27 @@ s3ranger configure
 | `Ctrl+p` | Open command palette                           |
 | `u`      | Upload file/folder                             |
 | `d`      | Download selected item                         |
+| `p`      | Preview one selected text file smaller than 10 MB |
 | `c`      | Copy selected item(s)                          |
 | `m`      | Move selected item(s)                          |
 | `Delete` | Delete selected item                           |
 | `Ctrl+k` | Rename selected item                           |
 | `F1`     | Help                                           |
+
+Select exactly one file with `Space`, then press `p` to preview it.
+In the preview popup, use arrow keys or Page Up/Down to scroll. `Ctrl+f`
+focuses a literal, case-insensitive search; with a search query, `Enter` or `F3`
+jumps to the next match and `Shift+F3` jumps to the previous match, wrapping at
+the ends. These keys do nothing when the query is empty and keep the current focus.
+`Esc` returns from search to the preview, then closes the popup and restores
+the list position and file selection. Preview supports UTF-8 and BOM-marked
+UTF-16 text with these extensions (case-insensitive): `.txt`, `.md`, `.markdown`,
+`.log`, `.csv`, `.tsv`, `.json`, `.jsonl`, `.yaml`, `.yml`, `.toml`, `.ini`, `.cfg`,
+`.conf`, `.xml`, `.py`, `.js`, `.jsx`, `.ts`, `.tsx`, `.html`, `.css`, `.sh`, `.sql`,
+`.go`, `.rs`, `.c`, `.h`, `.cpp`, `.hpp`, `.java`, `.kt`, `.dart`, and `.swift`.
+Other extensions, extensionless files, and binary content are rejected.
+Previews are read-only, loaded in memory, and limited to strictly fewer than
+10,000,000 bytes.
 
 ### Working with S3-Compatible Services
 
@@ -432,3 +449,57 @@ If you encounter any issues or have questions:
 - [Report bugs](https://github.com/Sharashchandra/s3ranger/issues)
 - [Request features](https://github.com/Sharashchandra/s3ranger/issues)
 - [Discussions](https://github.com/Sharashchandra/s3ranger/discussions)
+
+### Regression tests
+
+Install the locked development environment with `uv sync --locked`, then start
+Docker Desktop (or a Docker daemon with Compose v2). Run the full suite:
+
+```bash
+uv run pytest
+```
+
+The default run requires Docker and the AWS CLI supplied by the project. It
+starts a dedicated RustFS container pinned by image digest, binds its S3 port
+only to localhost on a dynamically assigned port, waits for authenticated
+readiness, and removes the container and its temporary storage afterward.
+Test buckets, files, credentials, and AWS configuration are isolated from your
+accounts. Unit/request-contract tests remain offline; RustFS tests exercise
+actual boto3 and recursive AWS CLI transfers plus a UI upload/download flow.
+AWS bucket-pagination request contracts are stubbed; RustFS object pagination
+is verified against the server. This suite does not claim to validate every AWS
+service behavior against RustFS.
+
+Both **line coverage and branch coverage must independently reach 90%** across
+`src/s3ranger`. Results are in `htmlcov/index.html` and `coverage.json`. A failed
+coverage gate makes the command fail even when individual tests pass. Run a
+focused diagnostic test with `uv run pytest --offline --no-cov tests/test_ui.py`;
+`--offline` explicitly omits integration tests and is not full acceptance.
+
+Visual tests compare 49 saved SVGs covering screens and dialogs at 80×24,
+120×40, and 160×50, all four themes at 120×40, and empty, selected, progress,
+validation, error, and maximum-length preview key states. Dates, paths, colors,
+focus and animation positions are deterministic. Compact dialogs scroll to keep
+focused controls reachable; the compact object view omits modification dates to
+leave room for names and sizes.
+
+If a visual test fails, open `snapshot_report.html` and inspect the difference.
+Only after confirming that every changed render is intentional, update its
+baseline:
+
+```bash
+uv run pytest --offline --no-cov tests/test_snapshots.py --snapshot-update
+uv run pytest
+```
+
+Commit the reviewed SVG changes under `tests/__snapshots__` with the change.
+Ordinary tests never rewrite these files. Dependency upgrades may legitimately
+change renders; use the lockfile and review the visual differences.
+
+If RustFS startup fails, the test output includes container logs. Check that
+Docker is running and `docker compose version` and `uv run aws --version` work.
+The first run requires network access to download the pinned image. Startup has
+a bounded readiness timeout and fails rather than skipping integration tests.
+After forcibly terminating pytest, remove only the abandoned test project shown
+by `docker compose ls`: `docker compose -f tests/compose.yaml -p PROJECT down
+--volumes --remove-orphans` (replace `PROJECT` with its `s3ranger-tests-…` name).

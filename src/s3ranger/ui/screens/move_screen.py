@@ -249,9 +249,9 @@ class MoveScreen(Screen[bool]):
                 if is_folder:
                     operation_func(
                         source_s3_bucket=self.source_bucket,
-                        source_s3_prefix=source_key,
+                        source_s3_prefix=source_key.rstrip("/") + "/",
                         destination_s3_bucket=self.destination_bucket,
-                        destination_s3_prefix=dest_key,
+                        destination_s3_prefix=dest_key.rstrip("/") + "/",
                     )
                 else:
                     operation_func(
@@ -269,7 +269,7 @@ class MoveScreen(Screen[bool]):
 
         except Exception as e:
             # Error
-            self.app.call_later(lambda: self._on_error(e))
+            self.app.call_later(lambda error=e: self._on_error(error))
 
     def _on_success(self, message: str) -> None:
         """Handle successful operation."""

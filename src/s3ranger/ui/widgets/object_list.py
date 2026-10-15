@@ -7,7 +7,8 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Label, ListItem, ListView, LoadingIndicator, Static
 
-from s3ranger.gateways.s3 import S3
+from s3ranger.gateways.s3 import PREVIEW_LIMIT, S3
+from s3ranger.ui.modals.preview_modal import PreviewModal
 from s3ranger.ui.constants import DEFAULT_DOWNLOAD_DIRECTORY, OBJECT_LIST_PAGE_SIZE, SCROLL_THRESHOLD_ITEMS
 from s3ranger.ui.utils import format_file_size, format_folder_display_text
 from s3ranger.ui.widgets.breadcrumb import Breadcrumb
@@ -19,6 +20,12 @@ FILE_ICON = "📄"
 COLUMN_NAMES = ["Name", "Type", "Modified", "Size"]
 CHECKBOX_CHECKED = "[✓]"
 CHECKBOX_UNCHECKED = "[ ]"
+TEXT_PREVIEW_EXTENSIONS = {
+    "txt", "md", "markdown", "log", "csv", "tsv", "json", "jsonl", "yaml", "yml",
+    "toml", "ini", "cfg", "conf", "xml", "py", "js", "jsx", "ts", "tsx", "html",
+    "css", "sh", "sql", "go", "rs", "c", "h", "cpp", "hpp", "java", "kt", "dart",
+    "swift",
+}
 
 
 class ObjectItem(ListItem):
@@ -106,6 +113,7 @@ class ObjectList(Static):
     """Right panel widget displaying the contents of the selected S3 bucket."""
 
     BINDINGS = [
+        Binding("p", "preview", "Preview"),
         Binding("d", "download", "Download"),
         Binding("u", "upload", "Upload"),
         Binding("delete", "delete_item", "Delete"),
@@ -132,7 +140,7 @@ class ObjectList(Static):
     # Private cache for current level objects
     _on_load_complete_callback: callable = None
     _unsorted_objects: list[dict] = []  # Cache of unsorted objects
-    _selected_keys: set = set()  # Track selected object keys
+    _selected_keys: set[str]  # Each instance owns its selected keys.
 
     # Pagination state
     _continuation_token: str | None = None  # Token for next page
@@ -168,20 +176,21 @@ class ObjectList(Static):
         """
         super().__init__(**kwargs)
         self.folders_only = folders_only
+        self._selected_keys = set()
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Check if an action is allowed based on current selection state."""
         # In folders_only mode (move/copy screen), disable all file operations
         if self.folders_only:
-            blocked_actions = {"download", "upload", "delete_item", "rename_item", "move", "copy", "show_sort_overlay", "toggle_selection", "select_all", "clear_selection"}
+            blocked_actions = {"preview", "download", "upload", "delete_item", "rename_item", "move", "copy", "show_sort_overlay", "toggle_selection", "select_all", "clear_selection"}
             if action in blocked_actions:
                 return False
 
         # Actions that require at least one item to be selected via checkbox
-        selection_required_actions = {"download", "delete_item", "rename_item", "move", "copy"}
+        selection_required_actions = {"preview", "download", "delete_item", "rename_item", "move", "copy"}
 
         # Actions that are blocked when multiple items are selected
-        multi_select_blocked_actions = {"upload", "rename_item", "show_sort_overlay"}
+        multi_select_blocked_actions = {"preview", "upload", "rename_item", "show_sort_overlay"}
 
         # If no items selected via checkbox, disable selection-required actions
         if self.selected_count == 0:
@@ -305,6 +314,7 @@ class ObjectList(Static):
     def watch_current_bucket(self, bucket_name: str) -> None:
         """React to bucket changes."""
         if bucket_name:
+            self._clear_all_selections()
             self._clear_selection()
             self.is_loading = True
             self.current_prefix = ""
@@ -353,9 +363,8 @@ class ObjectList(Static):
             list_view = self.query_one("#object-list", ListView)
             list_view.display = True
 
-            # Use a slightly longer delay for the actual focus operation
-            # This gives the UI time to fully render, especially with many objects
-            self.set_timer(0.1, self._apply_focus)
+            # Apply focus once the current layout has rendered.
+            self.call_after_refresh(self._apply_focus)
         except Exception:
             # Fall back to focusing the widget itself
             self.focus()
@@ -367,8 +376,8 @@ class ObjectList(Static):
             list_view.focus()
             if len(list_view.children) > 0:
                 list_view.index = 0
-                # Schedule another follow-up focus with additional delay
-                self.set_timer(0.2, self._ensure_focus)
+                # Verify focus after the list redraws.
+                self.call_after_refresh(self._ensure_focus)
         except Exception:
             pass
 
@@ -554,12 +563,7 @@ class ObjectList(Static):
         else:
             self.is_loading = False
 
-            # Calculate delay based on number of objects (more objects = longer delay)
-            obj_count = len(self.objects)
-            focus_delay = min(0.2, 0.05 + (obj_count * 0.002))  # Scale up to max 0.2s
-
-            # Schedule focus with a calculated delay based on object count
-            self.set_timer(focus_delay, self._focus_first_item)
+            self.call_after_refresh(self._focus_first_item)
 
         self._execute_completion_callback()
 
@@ -678,6 +682,7 @@ class ObjectList(Static):
             "key": filename,
             "is_folder": False,
             "size": format_file_size(s3_object["Size"]),
+            "size_bytes": s3_object["Size"],
             "modified": s3_object["LastModified"].strftime("%Y-%m-%d %H:%M"),
             "type": self._get_file_extension(filename),
         }
@@ -775,6 +780,24 @@ class ObjectList(Static):
         self._focus_first_item()  # Reuse focus logic
 
     # Action methods
+    def action_preview(self) -> None:
+        """Preview exactly one checkbox-selected text file."""
+        selected_objects = self.get_selected_objects()
+        if len(selected_objects) != 1:
+            self.notify("Select exactly one file with Space to preview", severity="warning")
+            return
+        obj = selected_objects[0]
+        if obj.get("is_folder") or not self.current_bucket or self.is_loading or self.folders_only:
+            self.notify("Select a file to preview", severity="warning")
+            return
+        if self._get_file_extension(obj["key"]) not in TEXT_PREVIEW_EXTENSIONS:
+            self.notify("Preview is available only for text files", severity="warning")
+            return
+        if obj["size_bytes"] >= PREVIEW_LIMIT:
+            self.notify("Preview is available only for files smaller than 10 MB", severity="warning")
+            return
+        self.app.push_screen(PreviewModal(self.current_bucket, self.current_prefix + obj["key"]))
+
     def action_download(self) -> None:
         """Download selected items"""
         # Get the selected objects (via checkbox)

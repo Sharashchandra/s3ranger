@@ -164,7 +164,7 @@ class MultiDownloadModal(ModalScreen[bool]):
         try:
             if progress:
                 progress_widget = self.query_one("#progress-indicator", ProgressWidget)
-                progress_widget.text = progress
+                progress_widget.set_text(progress)
         except Exception:
             pass
 

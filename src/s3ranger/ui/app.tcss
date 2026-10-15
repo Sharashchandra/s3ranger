@@ -1335,3 +1335,49 @@ ProgressModal {
     text-style: none;
     padding: 2 4;
 }
+
+/* Keep dialogs usable in compact terminals; focused controls scroll into view. */
+#upload-dialog, #download-dialog, #delete-dialog, #rename-dialog,
+#progress-modal-dialog {
+    max-width: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+#bucket-list {
+    width: 30%;
+    min-width: 24;
+    max-width: 40;
+}
+
+/* Leave room for names and sizes when a terminal is too narrow for dates. */
+S3Ranger.compact .object-modified,
+S3Ranger.compact .object-modified-header {
+    display: none;
+}
+
+S3Ranger.compact .object-key,
+S3Ranger.compact .object-name-header {
+    width: 1fr;
+}
+
+S3Ranger.compact .object-extension,
+S3Ranger.compact .object-type-header {
+    width: 5;
+}
+
+S3Ranger.compact .object-size,
+S3Ranger.compact .object-size-header {
+    width: 7;
+}
+
+#progress-indicator, #progress-modal-widget {
+    height: auto;
+    min-height: 10;
+}
+
+.progress-container {
+    height: auto;
+    min-height: 6;
+}

@@ -29,6 +29,10 @@ class ProgressWidget(Widget):
             0.05, self.update_progress
         )  # Increased speed (was 0.1)
 
+    def set_text(self, text: str) -> None:
+        self.progress_text = text
+        self.query_one(".progress-text", Static).update(text)
+
     def update_progress(self) -> None:
         """Update the bouncing progress bar."""
         progress_bar = self.query_one("#custom-progress-bar", Static)
